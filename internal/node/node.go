@@ -1,4 +1,4 @@
-package fs
+package node
 
 import (
 	"sync"
@@ -14,7 +14,7 @@ type Node struct {
 
 	ID       uint64
 	Name     string
-	Parent   *Directory
+	Parent   FSNode
 	ObjectID *string
 
 	Mode  uint32
@@ -25,12 +25,4 @@ type Node struct {
 	Atime time.Time
 	Mtime time.Time
 	Ctime time.Time
-}
-
-func (f *File) GetNode() *Node {
-	return &f.Node
-}
-
-func (d *Directory) GetNode() *Node {
-	return &d.Node
 }

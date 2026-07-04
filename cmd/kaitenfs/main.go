@@ -8,9 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	kfs "github.com/Gthamsrim1/kaiten/fs"
-	gofuse "github.com/hanwen/go-fuse/v2/fs"
-	"github.com/hanwen/go-fuse/v2/fuse"
+	"github.com/Gthamsrim1/kaiten/internal/mountfs"
 )
 
 func main() {
@@ -22,30 +20,10 @@ func main() {
 		fmt.Println("Usage: kaitenfs [-debug] <mountpoint>")
 		os.Exit(1)
 	}
-
 	mountPoint := args[0]
 
-	createdMountPoint, err := ensureMountPoint(mountPoint)
+	server, createdMountPoint, err := mountfs.Mount(mountPoint, *debug)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	kaitenFS := kfs.New()
-	kaitenFS.Seed()
-
-	server, err := gofuse.Mount(
-		mountPoint,
-		kaitenFS.Root,
-		&gofuse.Options{
-			MountOptions: fuse.MountOptions{
-				Debug: *debug,
-			},
-		},
-	)
-	if err != nil {
-		if createdMountPoint {
-			os.Remove(mountPoint)
-		}
 		log.Fatal(err)
 	}
 
@@ -64,31 +42,4 @@ func main() {
 	if createdMountPoint {
 		os.Remove(mountPoint)
 	}
-}
-
-func ensureMountPoint(path string) (created bool, err error) {
-	info, err := os.Stat(path)
-	switch {
-	case os.IsNotExist(err):
-		if err := os.MkdirAll(path, 0755); err != nil {
-			return false, fmt.Errorf("creating mountpoint: %w", err)
-		}
-		return true, nil
-
-	case err != nil:
-		return false, fmt.Errorf("checking mountpoint: %w", err)
-
-	case !info.IsDir():
-		return false, fmt.Errorf("mountpoint %q exists and is not a directory", path)
-	}
-
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return false, fmt.Errorf("reading mountpoint: %w", err)
-	}
-	if len(entries) > 0 {
-		return false, fmt.Errorf("mountpoint %q is not empty", path)
-	}
-
-	return false, nil
 }

@@ -1,9 +1,11 @@
-package fs
+package tree
 
 import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/Gthamsrim1/kaiten/internal/content"
+	"github.com/Gthamsrim1/kaiten/internal/node"
 	gofuse "github.com/hanwen/go-fuse/v2/fs"
 )
 
@@ -23,12 +25,12 @@ func New() *KaitenFS {
 
 func (k *KaitenFS) Seed() {
 	root := k.Root
-	_, err := root.CreateFile("hello", Memory([]byte("Hello from KaitenFS!\n")))
+	_, err := root.CreateFile("hello", content.Memory([]byte("Hello from KaitenFS!\n")))
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = root.CreateFile("readme", Memory([]byte("Welcome to KaitenFS!\n")))
+	_, err = root.CreateFile("readme", content.Memory([]byte("Welcome to KaitenFS!\n")))
 	if err != nil {
 		panic(err)
 	}
@@ -51,12 +53,12 @@ func (k *KaitenFS) Seed() {
 
 func (k *KaitenFS) newRoot() *Directory {
 	return &Directory{
-		Node: Node{
+		Node: node.Node{
 			ID:   k.nextID(),
 			Name: "/",
 		},
 		FS:       k,
-		Children: make(map[string]FSNode),
+		Children: make(map[string]node.FSNode),
 	}
 }
 

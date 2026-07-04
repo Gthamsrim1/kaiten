@@ -1,13 +1,6 @@
-package fs
+package content
 
 import "sync"
-
-type Content interface {
-	Read(offset int64, p []byte) (int, error)
-	Write(offset int64, p []byte) (int, error)
-	Size() uint64
-}
-
 
 type MemoryContent struct {
 	mu   sync.RWMutex
@@ -37,11 +30,8 @@ func (m *MemoryContent) Write(offset int64, p []byte) (int, error) {
 	defer m.mu.Unlock()
 
 	end := int(offset) + len(p)
-
 	if end > len(m.data) {
-		newData := make([]byte, end)
-		copy(newData, m.data)
-		m.data = newData
+		m.data = append(m.data, make([]byte, end-len(m.data))...)
 	}
 
 	copy(m.data[offset:], p)
@@ -52,4 +42,14 @@ func (m *MemoryContent) Size() uint64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return uint64(len(m.data))
+}
+
+// Bytes returns a copy of the underlying data. Intended for tests/debugging —
+// prefer Read/Size for normal I/O.
+func (m *MemoryContent) Bytes() []byte {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make([]byte, len(m.data))
+	copy(out, m.data)
+	return out
 }

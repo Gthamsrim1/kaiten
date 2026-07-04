@@ -58,6 +58,8 @@ Measure:
 # 4. Keep Components Small
 
 Each package should own a single responsibility.
+Each file should be around 80 lines (no more than 160 lines)
+Each package should contain no more than 5 files (excluding tests)
 
 ---
 

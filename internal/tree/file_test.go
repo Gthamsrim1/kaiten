@@ -1,17 +1,18 @@
-package fs
+package tree
 
 import (
 	"context"
 	"syscall"
 	"testing"
 
+	"github.com/Gthamsrim1/kaiten/internal/content"
 	"github.com/hanwen/go-fuse/v2/fuse"
 )
 
 func TestNewFile(t *testing.T) {
-	fs := New()
+	fs := newTestFS()
 
-	file, err := fs.Root.CreateFile("file", Memory([]byte("Madoka")))
+	file, err := fs.Root.CreateFile("file", content.Memory([]byte("Madoka")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,9 +31,9 @@ func TestNewFile(t *testing.T) {
 }
 
 func TestFileRead(t *testing.T) {
-	fs := New()
+	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", Memory([]byte("Madoka")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Madoka")))
 
 	buf := make([]byte, 6)
 
@@ -52,64 +53,64 @@ func TestFileRead(t *testing.T) {
 }
 
 func TestFileWrite(t *testing.T) {
-	fs := New()
+	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", Memory(nil))
+	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
 
-	n, err := file.Write([]byte("Madoka"), 0)
-	if err != nil {
-		t.Fatal(err)
+	n, errno := file.Write(context.Background(), nil, []byte("Madoka"), 0)
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
 	}
 
 	if n != 6 {
 		t.Fatalf("expected 6 bytes written, got %d", n)
 	}
 
-	mem := file.Content.(*MemoryContent)
+	mem := file.Content.(*content.MemoryContent)
 
-	if string(mem.data) != "Madoka" {
-		t.Fatalf("expected %q, got %q", "Madoka", string(mem.data))
+	if string(mem.Bytes()) != "Madoka" {
+		t.Fatalf("expected %q, got %q", "Madoka", string(mem.Bytes()))
 	}
 }
 
 func TestFileOverwrite(t *testing.T) {
-	fs := New()
+	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", Memory([]byte("Homura")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Homura")))
 
-	_, err := file.Write([]byte("M"), 0)
-	if err != nil {
-		t.Fatal(err)
+	_, errno := file.Write(context.Background(), nil, []byte("M"), 0)
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
 	}
 
-	mem := file.Content.(*MemoryContent)
+	mem := file.Content.(*content.MemoryContent)
 
-	if string(mem.data) != "Momura" {
-		t.Fatalf("expected %q, got %q", "Momura", string(mem.data))
+	if string(mem.Bytes()) != "Momura" {
+		t.Fatalf("expected %q, got %q", "Momura", string(mem.Bytes()))
 	}
 }
 
 func TestFileAppend(t *testing.T) {
-	fs := New()
+	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", Memory([]byte("Kyoko")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Kyoko")))
 
-	_, err := file.Write([]byte(" Sakura"), 5)
-	if err != nil {
-		t.Fatal(err)
+	_, errno := file.Write(context.Background(), nil, []byte(" Sakura"), 5)
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
 	}
 
-	mem := file.Content.(*MemoryContent)
+	mem := file.Content.(*content.MemoryContent)
 
-	if string(mem.data) != "Kyoko Sakura" {
-		t.Fatalf("expected %q, got %q", "Kyoko Sakura", string(mem.data))
+	if string(mem.Bytes()) != "Kyoko Sakura" {
+		t.Fatalf("expected %q, got %q", "Kyoko Sakura", string(mem.Bytes()))
 	}
 }
 
 func TestFileOpen(t *testing.T) {
-	fs := New()
+	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", Memory(nil))
+	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
 
 	fh, flags, errno := file.Open(context.Background(), 0)
 
@@ -127,9 +128,9 @@ func TestFileOpen(t *testing.T) {
 }
 
 func TestFileGetattr(t *testing.T) {
-	fs := New()
+	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", Memory([]byte("Homura")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Homura")))
 
 	var out fuse.AttrOut
 
@@ -138,7 +139,7 @@ func TestFileGetattr(t *testing.T) {
 		t.Fatalf("expected errno 0, got %v", errno)
 	}
 
-	if out.Mode != syscall.S_IFREG|0644 {
+	if out.Mode != syscall.S_IFREG | 0644 {
 		t.Fatalf("unexpected mode %o", out.Mode)
 	}
 
@@ -148,9 +149,9 @@ func TestFileGetattr(t *testing.T) {
 }
 
 func TestEmptyFile(t *testing.T) {
-	fs := New()
+	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", Memory(nil))
+	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
 
 	buf := make([]byte, 10)
 

@@ -1,4 +1,4 @@
-package fs
+package errs
 
 import (
 	"errors"
@@ -33,6 +33,7 @@ var (
 	// Storage
 	ErrObjectMissing   = errors.New("backing object missing")
 	ErrObjectCorrupted = errors.New("backing object corrupted")
+	ErrRefUnderflow    = errors.New("refcount underflow")
 
 	// Runtime
 	ErrInvalidInode     = errors.New("invalid inode")
@@ -97,6 +98,9 @@ func ToErrno(err error) syscall.Errno {
 	
 	case errors.Is(err, ErrNotEmpty):
 		return syscall.ENOTEMPTY
+	
+	case errors.Is(err, ErrRefUnderflow):
+		return syscall.EIO
 
 	default:
 		return syscall.EIO

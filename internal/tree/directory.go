@@ -1,4 +1,4 @@
-package fs
+package tree
 
 import (
 	"context"
@@ -6,6 +6,9 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/Gthamsrim1/kaiten/internal/content"
+	"github.com/Gthamsrim1/kaiten/internal/errs"
+	"github.com/Gthamsrim1/kaiten/internal/node"
 	gofuse "github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 )
@@ -13,14 +16,18 @@ import (
 type Directory struct {
 	gofuse.Inode
 
-	Node
+	node.Node
 	FS *KaitenFS
 
 	mu       sync.RWMutex
-	Children map[string]FSNode
+	Children map[string]node.FSNode
 }
 
-func (d *Directory) CreateFile(name string, content Content) (*File, error) {
+func (d *Directory) GetNode() *node.Node {
+	return &d.Node
+}
+
+func (d *Directory) CreateFile(name string, content content.Content) (*File, error) {
 	return d.FS.createFile(name, d, content)
 }
 
@@ -36,7 +43,7 @@ func (d *Directory) DeleteDirectory(name string) error {
 	return d.FS.deleteDirectory(name, d)
 }
 
-func (d *Directory) Mount(ctx context.Context, node FSNode) *gofuse.Inode {
+func (d *Directory) Mount(ctx context.Context, node node.FSNode) *gofuse.Inode {
 	id := node.GetNode().ID
 
 	d.FS.mu.Lock()
@@ -75,9 +82,9 @@ func (d *Directory) Mount(ctx context.Context, node FSNode) *gofuse.Inode {
 }
 
 func (d *Directory) Create(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (node *gofuse.Inode, fh gofuse.FileHandle, fuseFlags uint32, errno syscall.Errno) {
-	file, err := d.CreateFile(name, Memory(nil))
+	file, err := d.CreateFile(name, content.Memory(nil))
 	if err != nil {
-		return nil, nil, 0, ToErrno(err)
+		return nil, nil, 0, errs.ToErrno(err)
 	}
 
 	file.Node.Mode = syscall.S_IFREG | (mode &^ syscall.S_IFMT)
@@ -94,7 +101,7 @@ func (d *Directory) Create(ctx context.Context, name string, flags uint32, mode 
 func (d *Directory) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (node *gofuse.Inode, errno syscall.Errno) {
 	dir, err := d.CreateDirectory(name)
 	if err != nil {
-		return nil, ToErrno(err)
+		return nil, errs.ToErrno(err)
 	}
 
 	dir.Node.Mode = syscall.S_IFDIR | (mode &^ syscall.S_IFMT)
@@ -175,7 +182,7 @@ func (d *Directory) Unlink(ctx context.Context, name string) syscall.Errno {
 	}
 
 	if err := d.DeleteFile(name); err != nil {
-		return ToErrno(err)
+		return errs.ToErrno(err)
 	}
 
 	id := node.GetNode().ID
@@ -198,7 +205,7 @@ func (d *Directory) Rmdir(ctx context.Context, name string) syscall.Errno {
 	}
 
 	if err := d.DeleteDirectory(name); err != nil {
-		return ToErrno(err)
+		return errs.ToErrno(err)
 	}
 
 	id := node.GetNode().ID
@@ -219,22 +226,27 @@ func (d *Directory) Rename(ctx context.Context, name string, newParent gofuse.In
 	}
 
 	if err := d.FS.rename(d, dir, name, newName); err != nil {
-		return ToErrno(err)
+		return errs.ToErrno(err)
 	}
 
 	d.RmChild(name)
 	if child := dir.GetChild(newName); child != nil {
 		dir.RmChild(newName)
-		_ = child
 	}
 
-	d.mu.RLock()
-	node := dir.Children[newName]
-	d.mu.RUnlock()
-	if inode := d.EmbeddedInode(); inode != nil {
-		if mounted, ok := d.FS.mounted[node.GetNode().ID]; ok {
-			dir.AddChild(newName, mounted, true)
-		}
+	dir.mu.RLock()
+	node, ok := dir.Children[newName]
+	dir.mu.RUnlock()
+	if !ok {
+		return syscall.EIO
+	}
+
+	d.FS.mu.Lock()
+	mounted, exists := d.FS.mounted[node.GetNode().ID]
+	d.FS.mu.Unlock()
+
+	if exists {
+		dir.AddChild(newName, mounted, true)
 	}
 
 	return 0
