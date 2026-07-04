@@ -10,7 +10,7 @@ func TestCreateFile(t *testing.T) {
 	fs := New()
 	file, err := fs.Root.CreateFile("file", Memory([]byte("Hello")))
 	if err != nil {
-		t.Fatal("Couldn't create file")
+		t.Fatal(err)
 	}
 
 	if file.Name != "file" {
@@ -23,6 +23,32 @@ func TestCreateFile(t *testing.T) {
 
 	if _, ok := fs.Root.Children["file"]; !ok {
 		t.Fatal("file not added to children")
+	}
+}
+
+func TestDeleteFile(t *testing.T) {
+	fs := New()
+	_, err := fs.Root.CreateFile("file", Memory([]byte("Hello")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = fs.Root.DeleteFile("file")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeleteDirectory(t *testing.T) {
+	fs := New()
+	_, err := fs.Root.CreateDirectory("dir")
+	if err != nil {
+		t.Fatal(err)
+	}  
+
+	err = fs.Root.DeleteDirectory("dir")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -145,5 +171,49 @@ func TestCreateDuplicateDirectory(t *testing.T) {
 	_, err := fs.Root.CreateDirectory("directory")
 	if err == nil {
 		t.Fatal("Expected error: Duplicate Directories")
+	}
+}
+
+func TestDeleteMissingFile(t *testing.T) {
+	fs := New()
+
+	err := fs.Root.DeleteFile("file")
+	if err == nil {
+		t.Fatal("Expected File not found, got deleted")
+	}
+}
+
+func TestDeleteMissingDir(t *testing.T) {
+	fs := New()
+
+	err := fs.Root.DeleteDirectory("dir")
+	if err == nil {
+		t.Fatal("Expected Directory not found, got deleted")
+	}
+}
+
+func TestDeleteDirectoryAsFile(t *testing.T) {
+	fs := New()
+	_, err := fs.Root.CreateDirectory("file")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = fs.Root.DeleteFile("file")
+	if err == nil {
+		t.Fatal("Expected File not found, got deleted")
+	}
+}
+
+func TestDeleteFileAsDirectory(t *testing.T) {
+	fs := New()
+	_, err := fs.Root.CreateFile("file", Memory(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = fs.Root.DeleteDirectory("file")
+	if err == nil {
+		t.Fatal("Expected Directory not found, got deleted")
 	}
 }

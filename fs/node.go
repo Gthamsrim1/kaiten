@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"sync"
 	"time"
 )
 
@@ -9,6 +10,8 @@ type FSNode interface {
 }
 
 type Node struct {
+	mu sync.RWMutex
+
 	ID       uint64
 	Name     string
 	Parent   *Directory

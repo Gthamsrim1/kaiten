@@ -11,6 +11,7 @@ var (
 	ErrEmptyName   = errors.New("empty name")
 	ErrNameTooLong = errors.New("name too long")
 	ErrInvalidPath = errors.New("invalid path")
+	ErrNotEmpty    = errors.New("not empty")
 
 	// Lookup
 	ErrNotFound      = errors.New("node not found")
@@ -93,6 +94,9 @@ func ToErrno(err error) syscall.Errno {
 
 	case errors.Is(err, ErrInvalidOperation):
 		return syscall.ENOSYS
+	
+	case errors.Is(err, ErrNotEmpty):
+		return syscall.ENOTEMPTY
 
 	default:
 		return syscall.EIO

@@ -1,14 +1,16 @@
 package fs
 
 import (
+	"sync"
 	"sync/atomic"
 
 	gofuse "github.com/hanwen/go-fuse/v2/fs"
 )
 
 type KaitenFS struct {
-	Root *Directory
-	ID   atomic.Uint64
+	Root    *Directory
+	ID      atomic.Uint64
+	mu      sync.Mutex
 	mounted map[uint64]*gofuse.Inode
 }
 

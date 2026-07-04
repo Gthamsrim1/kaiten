@@ -3,6 +3,7 @@ package fs
 import (
 	"context"
 	"fmt"
+	"sync"
 	"syscall"
 
 	gofuse "github.com/hanwen/go-fuse/v2/fs"
@@ -15,6 +16,7 @@ type Directory struct {
 	Node
 	FS *KaitenFS
 
+	mu       sync.RWMutex
 	Children map[string]FSNode
 }
 
@@ -22,12 +24,23 @@ func (d *Directory) CreateFile(name string, content Content) (*File, error) {
 	return d.FS.createFile(name, d, content)
 }
 
+func (d *Directory) DeleteFile(name string) error {
+	return d.FS.deleteFile(name, d)
+}
+
 func (d *Directory) CreateDirectory(name string) (*Directory, error) {
 	return d.FS.createDirectory(name, d)
 }
 
-func (d *Directory) Mount(ctx context.Context, node FSNode) *gofuse.Inode  {
+func (d *Directory) DeleteDirectory(name string) error {
+	return d.FS.deleteDirectory(name, d)
+}
+
+func (d *Directory) Mount(ctx context.Context, node FSNode) *gofuse.Inode {
 	id := node.GetNode().ID
+
+	d.FS.mu.Lock()
+	defer d.FS.mu.Unlock()
 
 	if inode, ok := d.FS.mounted[id]; ok {
 		return inode
@@ -67,7 +80,13 @@ func (d *Directory) Create(ctx context.Context, name string, flags uint32, mode 
 		return nil, nil, 0, ToErrno(err)
 	}
 
+	file.Node.Mode = syscall.S_IFREG | (mode &^ syscall.S_IFMT)
+
 	inode := d.Mount(ctx, file)
+
+	var attrOut fuse.AttrOut
+	file.Getattr(ctx, nil, &attrOut)
+	out.Attr = attrOut.Attr
 
 	return inode, nil, fuse.FOPEN_DIRECT_IO, 0
 }
@@ -78,21 +97,52 @@ func (d *Directory) Mkdir(ctx context.Context, name string, mode uint32, out *fu
 		return nil, ToErrno(err)
 	}
 
+	dir.Node.Mode = syscall.S_IFDIR | (mode &^ syscall.S_IFMT)
+
 	inode := d.Mount(ctx, dir)
+
+	var attrOut fuse.AttrOut
+	dir.Getattr(ctx, inode, &attrOut)
+	out.Attr = attrOut.Attr
 
 	return inode, 0
 }
 
+func (d *Directory) Getattr(ctx context.Context, f gofuse.FileHandle, out *fuse.AttrOut) syscall.Errno {
+	out.Mode = d.Node.Mode
+	out.Uid = d.Node.UID
+	out.Gid = d.Node.GID
+	out.SetTimes(&d.Node.Atime, &d.Node.Mtime, &d.Node.Ctime)
+	return 0
+}
+
 func (d *Directory) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*gofuse.Inode, syscall.Errno) {
+	d.mu.RLock()
 	node, ok := d.Children[name]
+	d.mu.RUnlock()
+
 	if !ok {
 		return nil, syscall.ENOENT
 	}
 
-	return d.Mount(ctx, node), 0
+	inode := d.Mount(ctx, node)
+
+	var attrOut fuse.AttrOut
+	switch n := node.(type) {
+	case *File:
+		n.Getattr(ctx, nil, &attrOut)
+	case *Directory:
+		n.Getattr(ctx, inode, &attrOut)
+	}
+	out.Attr = attrOut.Attr
+
+	return inode, 0
 }
 
 func (d *Directory) Readdir(ctx context.Context) (gofuse.DirStream, syscall.Errno) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
 	entries := make([]fuse.DirEntry, 0, len(d.Children))
 
 	for name, node := range d.Children {
@@ -116,7 +166,85 @@ func (d *Directory) Readdir(ctx context.Context) (gofuse.DirStream, syscall.Errn
 	return gofuse.NewListDirStream(entries), 0
 }
 
+func (d *Directory) Unlink(ctx context.Context, name string) syscall.Errno {
+	d.mu.RLock()
+	node, ok := d.Children[name]
+	d.mu.RUnlock()
+	if !ok {
+		return syscall.ENOENT
+	}
+
+	if err := d.DeleteFile(name); err != nil {
+		return ToErrno(err)
+	}
+
+	id := node.GetNode().ID
+
+	d.RmChild(name)
+
+	d.FS.mu.Lock()
+	delete(d.FS.mounted, id)
+	d.FS.mu.Unlock()
+
+	return 0
+}
+
+func (d *Directory) Rmdir(ctx context.Context, name string) syscall.Errno {
+	d.mu.RLock()
+	node, ok := d.Children[name]
+	d.mu.RUnlock()
+	if !ok {
+		return syscall.ENOENT
+	}
+
+	if err := d.DeleteDirectory(name); err != nil {
+		return ToErrno(err)
+	}
+
+	id := node.GetNode().ID
+
+	d.RmChild(name)
+
+	d.FS.mu.Lock()
+	delete(d.FS.mounted, id)
+	d.FS.mu.Unlock()
+
+	return 0
+}
+
+func (d *Directory) Rename(ctx context.Context, name string, newParent gofuse.InodeEmbedder, newName string, flags uint32) syscall.Errno {
+	dir, ok := newParent.(*Directory)
+	if !ok {
+		return syscall.EIO
+	}
+
+	if err := d.FS.rename(d, dir, name, newName); err != nil {
+		return ToErrno(err)
+	}
+
+	d.RmChild(name)
+	if child := dir.GetChild(newName); child != nil {
+		dir.RmChild(newName)
+		_ = child
+	}
+
+	d.mu.RLock()
+	node := dir.Children[newName]
+	d.mu.RUnlock()
+	if inode := d.EmbeddedInode(); inode != nil {
+		if mounted, ok := d.FS.mounted[node.GetNode().ID]; ok {
+			dir.AddChild(newName, mounted, true)
+		}
+	}
+
+	return 0
+}
+
 var _ gofuse.NodeCreater = (*Directory)(nil)
 var _ gofuse.NodeMkdirer = (*Directory)(nil)
+var _ gofuse.NodeGetattrer = (*Directory)(nil)
 var _ gofuse.NodeLookuper = (*Directory)(nil)
 var _ gofuse.NodeReaddirer = (*Directory)(nil)
+var _ gofuse.NodeUnlinker = (*Directory)(nil)
+var _ gofuse.NodeRmdirer = (*Directory)(nil)
+var _ gofuse.NodeRenamer = (*Directory)(nil)
