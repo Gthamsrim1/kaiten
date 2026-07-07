@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"context"
 	"fmt"
 	"sync/atomic"
 	"testing"
@@ -52,7 +51,7 @@ func benchmarkLookup(b *testing.B, n int) {
 	for i := 0; i < n; i++ {
 		_, _ = fs.Root.CreateFile(fmt.Sprintf("file-%d", i), content.Memory(nil))
 	}
-	ctx := context.Background()
+	ctx := testContext()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -78,7 +77,7 @@ func benchmarkReaddir(b *testing.B, n int) {
 	for i := 0; i < n; i++ {
 		_, _ = fs.Root.CreateFile(fmt.Sprintf("file-%d", i), content.Memory(nil))
 	}
-	ctx := context.Background()
+	ctx := testContext()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -1,12 +1,12 @@
 package tree
 
 import (
-	"context"
 	"syscall"
 	"testing"
 
 	"github.com/Gthamsrim1/kaiten/internal/content"
 	"github.com/Gthamsrim1/kaiten/internal/errs"
+	"github.com/hanwen/go-fuse/v2/fuse"
 )
 
 func TestCreateFile(t *testing.T) {
@@ -116,7 +116,7 @@ func TestReaddir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := context.Background()
+	ctx := testContext()
 
 	stream, errno := fs.Root.Readdir(ctx)
 	if errno != 0 {
@@ -404,5 +404,79 @@ func TestRenameFileOverFile(t *testing.T) {
 	}
 	if got != src {
 		t.Fatal("dst should now point at the renamed source file")
+	}
+}
+
+func TestLookupExistingFile(t *testing.T) {
+	fs := newTestFS()
+
+	_, _ = fs.Root.CreateFile("hello", content.Memory(nil))
+
+	var out fuse.EntryOut
+
+	inode, errno := fs.Root.Lookup(testContext(), "hello", &out)
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
+	}
+
+	if inode == nil {
+		t.Fatal("expected inode")
+	}
+
+	if out.Attr.Mode != syscall.S_IFREG|0644 {
+		t.Fatalf("unexpected mode %o", out.Attr.Mode)
+	}
+}
+
+func TestLookupMissing(t *testing.T) {
+	fs := newTestFS()
+
+	var out fuse.EntryOut
+
+	_, errno := fs.Root.Lookup(testContext(), "missing", &out)
+
+	if errno != syscall.ENOENT {
+		t.Fatalf("expected ENOENT, got %v", errno)
+	}
+}
+
+func TestDeleteRemovesChild(t *testing.T) {
+	fs := newTestFS()
+
+	_, _ = fs.Root.CreateFile("file", content.Memory(nil))
+
+	if err := fs.Root.DeleteFile("file"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := fs.Root.Children["file"]; ok {
+		t.Fatal("file still present after delete")
+	}
+}
+
+func TestDeleteDirectoryRemovesChild(t *testing.T) {
+	fs := newTestFS()
+
+	_, _ = fs.Root.CreateDirectory("dir")
+
+	if err := fs.Root.DeleteDirectory("dir"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := fs.Root.Children["dir"]; ok {
+		t.Fatal("directory still present after delete")
+	}
+}
+
+func TestEmptyReaddir(t *testing.T) {
+	fs := newTestFS()
+
+	stream, errno := fs.Root.Readdir(testContext())
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
+	}
+
+	if stream.HasNext() {
+		t.Fatal("expected empty directory")
 	}
 }

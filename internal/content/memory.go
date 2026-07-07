@@ -44,6 +44,25 @@ func (m *MemoryContent) Size() uint64 {
 	return uint64(len(m.data))
 }
 
+func (m *MemoryContent) Resize(size uint64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	current := uint64(len(m.data))
+
+	switch {
+	case size < current:
+		m.data = m.data[:size]
+
+	case size > current:
+		newData := make([]byte, size)
+		copy(newData, m.data)
+		m.data = newData
+	}
+
+	return nil
+} 
+
 // Bytes returns a copy of the underlying data. Intended for tests/debugging —
 // prefer Read/Size for normal I/O.
 func (m *MemoryContent) Bytes() []byte {

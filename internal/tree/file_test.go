@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"context"
 	"syscall"
 	"testing"
 
@@ -37,7 +36,7 @@ func TestFileRead(t *testing.T) {
 
 	buf := make([]byte, 6)
 
-	result, errno := file.Read(context.Background(), nil, buf, 0)
+	result, errno := file.Read(testContext(), nil, buf, 0)
 	if errno != 0 {
 		t.Fatalf("expected errno 0, got %v", errno)
 	}
@@ -57,7 +56,7 @@ func TestFileWrite(t *testing.T) {
 
 	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
 
-	n, errno := file.Write(context.Background(), nil, []byte("Madoka"), 0)
+	n, errno := file.Write(testContext(), nil, []byte("Madoka"), 0)
 	if errno != 0 {
 		t.Fatalf("expected errno 0, got %v", errno)
 	}
@@ -78,7 +77,7 @@ func TestFileOverwrite(t *testing.T) {
 
 	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Homura")))
 
-	_, errno := file.Write(context.Background(), nil, []byte("M"), 0)
+	_, errno := file.Write(testContext(), nil, []byte("M"), 0)
 	if errno != 0 {
 		t.Fatalf("expected errno 0, got %v", errno)
 	}
@@ -95,7 +94,7 @@ func TestFileAppend(t *testing.T) {
 
 	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Kyoko")))
 
-	_, errno := file.Write(context.Background(), nil, []byte(" Sakura"), 5)
+	_, errno := file.Write(testContext(), nil, []byte(" Sakura"), 5)
 	if errno != 0 {
 		t.Fatalf("expected errno 0, got %v", errno)
 	}
@@ -112,7 +111,7 @@ func TestFileOpen(t *testing.T) {
 
 	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
 
-	fh, flags, errno := file.Open(context.Background(), 0)
+	fh, flags, errno := file.Open(testContext(), 0)
 
 	if errno != 0 {
 		t.Fatalf("expected errno 0, got %v", errno)
@@ -134,7 +133,7 @@ func TestFileGetattr(t *testing.T) {
 
 	var out fuse.AttrOut
 
-	errno := file.Getattr(context.Background(), nil, &out)
+	errno := file.Getattr(testContext(), nil, &out)
 	if errno != 0 {
 		t.Fatalf("expected errno 0, got %v", errno)
 	}
@@ -155,7 +154,7 @@ func TestEmptyFile(t *testing.T) {
 
 	buf := make([]byte, 10)
 
-	result, errno := file.Read(context.Background(), nil, buf, 0)
+	result, errno := file.Read(testContext(), nil, buf, 0)
 	if errno != 0 {
 		t.Fatalf("expected errno 0, got %v", errno)
 	}
@@ -163,6 +162,125 @@ func TestEmptyFile(t *testing.T) {
 	data, status := result.Bytes(buf)
 	if status != fuse.OK {
 		t.Fatalf("unexpected status: %v", status)
+	}
+
+	if len(data) != 0 {
+		t.Fatalf("expected empty read, got %d bytes", len(data))
+	}
+}
+
+func TestFileReadOffset(t *testing.T) {
+	fs := newTestFS()
+
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("abcdef")))
+
+	buf := make([]byte, 4)
+
+	result, errno := file.Read(testContext(), nil, buf, 2)
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
+	}
+
+	data, status := result.Bytes(buf)
+	if status != fuse.OK {
+		t.Fatalf("unexpected status %v", status)
+	}
+
+	if string(data) != "cdef" {
+		t.Fatalf("expected %q, got %q", "cdef", string(data))
+	}
+}
+
+func TestFileTruncateSmaller(t *testing.T) {
+	fs := newTestFS()
+
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Hello World")))
+
+	var in fuse.SetAttrIn
+	in.Valid = fuse.FATTR_SIZE
+	in.Size = 5
+
+	var out fuse.AttrOut
+
+	errno := file.Setattr(testContext(), nil, &in, &out)
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
+	}
+
+	mem := file.Content.(*content.MemoryContent)
+
+	if string(mem.Bytes()) != "Hello" {
+		t.Fatalf("expected %q, got %q", "Hello", string(mem.Bytes()))
+	}
+
+	if out.Size != 5 {
+		t.Fatalf("expected size 5, got %d", out.Size)
+	}
+}
+
+func TestFileExtend(t *testing.T) {
+	fs := newTestFS()
+
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Hello")))
+
+	var in fuse.SetAttrIn
+	in.Valid = fuse.FATTR_SIZE
+	in.Size = 10
+
+	var out fuse.AttrOut
+
+	errno := file.Setattr(testContext(), nil, &in, &out)
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
+	}
+
+	mem := file.Content.(*content.MemoryContent)
+
+	if len(mem.Bytes()) != 10 {
+		t.Fatalf("expected len 10, got %d", len(mem.Bytes()))
+	}
+
+	if string(mem.Bytes()[:5]) != "Hello" {
+		t.Fatal("existing contents corrupted")
+	}
+
+	if out.Size != 10 {
+		t.Fatalf("expected size 10, got %d", out.Size)
+	}
+}
+
+func TestFileWriteMiddle(t *testing.T) {
+	fs := newTestFS()
+
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("abcdef")))
+
+	_, errno := file.Write(testContext(), nil, []byte("XYZ"), 3)
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
+	}
+
+	mem := file.Content.(*content.MemoryContent)
+
+	if string(mem.Bytes()) != "abcXYZ" {
+		t.Fatalf("expected %q, got %q", "abcXYZ", string(mem.Bytes()))
+	}
+}
+
+func TestReadPastEOF(t *testing.T) {
+	fs := newTestFS()
+
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("abc")))
+
+	buf := make([]byte, 10)
+
+	result, errno := file.Read(testContext(), nil, buf, 100)
+	if errno != 0 {
+		t.Fatalf("expected errno 0, got %v", errno)
+	}
+
+	data, status := result.Bytes(buf)
+	if status != fuse.OK {
+		t.Fatalf("unexpected status %v", status)
 	}
 
 	if len(data) != 0 {

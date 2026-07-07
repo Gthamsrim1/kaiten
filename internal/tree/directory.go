@@ -8,9 +8,11 @@ import (
 
 	"github.com/Gthamsrim1/kaiten/internal/content"
 	"github.com/Gthamsrim1/kaiten/internal/errs"
+	"github.com/Gthamsrim1/kaiten/internal/fuseutil"
 	"github.com/Gthamsrim1/kaiten/internal/node"
 	gofuse "github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
+	"golang.org/x/sys/unix"
 )
 
 type Directory struct {
@@ -82,6 +84,10 @@ func (d *Directory) Mount(ctx context.Context, node node.FSNode) *gofuse.Inode {
 }
 
 func (d *Directory) Create(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (node *gofuse.Inode, fh gofuse.FileHandle, fuseFlags uint32, errno syscall.Errno) {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+		return nil, nil, 0, errno
+	}
+	
 	file, err := d.CreateFile(name, content.Memory(nil))
 	if err != nil {
 		return nil, nil, 0, errs.ToErrno(err)
@@ -99,6 +105,10 @@ func (d *Directory) Create(ctx context.Context, name string, flags uint32, mode 
 }
 
 func (d *Directory) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (node *gofuse.Inode, errno syscall.Errno) {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+		return nil, errno
+	}
+
 	dir, err := d.CreateDirectory(name)
 	if err != nil {
 		return nil, errs.ToErrno(err)
@@ -124,6 +134,10 @@ func (d *Directory) Getattr(ctx context.Context, f gofuse.FileHandle, out *fuse.
 }
 
 func (d *Directory) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*gofuse.Inode, syscall.Errno) {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.X_OK); errno != 0 {
+		return nil, errno
+	}
+
 	d.mu.RLock()
 	node, ok := d.Children[name]
 	d.mu.RUnlock()
@@ -147,6 +161,10 @@ func (d *Directory) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 }
 
 func (d *Directory) Readdir(ctx context.Context) (gofuse.DirStream, syscall.Errno) {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.R_OK | unix.X_OK); errno != 0 {
+		return nil, errno
+	}
+
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -174,6 +192,10 @@ func (d *Directory) Readdir(ctx context.Context) (gofuse.DirStream, syscall.Errn
 }
 
 func (d *Directory) Unlink(ctx context.Context, name string) syscall.Errno {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+		return errno
+	}
+
 	d.mu.RLock()
 	node, ok := d.Children[name]
 	d.mu.RUnlock()
@@ -196,7 +218,26 @@ func (d *Directory) Unlink(ctx context.Context, name string) syscall.Errno {
 	return 0
 }
 
+func (d *Directory) Setattr(ctx context.Context, f gofuse.FileHandle, in *fuse.SetAttrIn, out *fuse.AttrOut) syscall.Errno {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK); errno != 0 {
+		return errno
+	}
+
+	d.Node.UpdateAttr(fuseutil.UpdateAttributes(in))
+
+	out.Mode = d.Node.Mode
+	out.Uid = d.Node.UID
+	out.Gid = d.Node.GID
+	out.SetTimes(&d.Node.Atime, &d.Node.Mtime, &d.Node.Ctime)
+
+	return 0
+}
+
 func (d *Directory) Rmdir(ctx context.Context, name string) syscall.Errno {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+		return errno
+	}
+
 	d.mu.RLock()
 	node, ok := d.Children[name]
 	d.mu.RUnlock()
@@ -220,9 +261,17 @@ func (d *Directory) Rmdir(ctx context.Context, name string) syscall.Errno {
 }
 
 func (d *Directory) Rename(ctx context.Context, name string, newParent gofuse.InodeEmbedder, newName string, flags uint32) syscall.Errno {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+		return errno
+	}
+
 	dir, ok := newParent.(*Directory)
 	if !ok {
 		return syscall.EIO
+	}
+
+	if errno := fuseutil.RequireAccess(ctx, &dir.Node, unix.W_OK | unix.X_OK); errno != 0 {
+		return errno
 	}
 
 	if err := d.FS.rename(d, dir, name, newName); err != nil {
@@ -252,11 +301,17 @@ func (d *Directory) Rename(ctx context.Context, name string, newParent gofuse.In
 	return 0
 }
 
+func (d *Directory) Access(ctx context.Context, mask uint32) syscall.Errno {
+	return fuseutil.RequireAccess(ctx, &d.Node, mask)
+}
+
 var _ gofuse.NodeCreater = (*Directory)(nil)
 var _ gofuse.NodeMkdirer = (*Directory)(nil)
 var _ gofuse.NodeGetattrer = (*Directory)(nil)
+var _ gofuse.NodeSetattrer = (*Directory)(nil)
 var _ gofuse.NodeLookuper = (*Directory)(nil)
 var _ gofuse.NodeReaddirer = (*Directory)(nil)
 var _ gofuse.NodeUnlinker = (*Directory)(nil)
 var _ gofuse.NodeRmdirer = (*Directory)(nil)
 var _ gofuse.NodeRenamer = (*Directory)(nil)
+var _ gofuse.NodeAccesser = (*Directory)(nil)
