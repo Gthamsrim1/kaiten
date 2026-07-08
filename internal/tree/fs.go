@@ -13,15 +13,15 @@ import (
 type KaitenFS struct {
 	Root    *Directory
 	ID      atomic.Uint64
-	dirty	atomic.Bool
+	dirty   atomic.Bool
 	mu      sync.Mutex
 	mounted map[uint64]*gofuse.Inode
 }
 
 func New() *KaitenFS {
-	fs := &KaitenFS{ mounted: make(map[uint64]*gofuse.Inode) }
+	fs := &KaitenFS{mounted: make(map[uint64]*gofuse.Inode)}
 	fs.Root = fs.newRoot()
-	
+
 	return fs
 }
 
@@ -55,7 +55,7 @@ func (k *KaitenFS) Seed() {
 
 func (k *KaitenFS) newRoot() *Directory {
 	return &Directory{
-		Node: 	  newNode(k, "/", nil, syscall.S_IFDIR, 0755),
+		Node:     newNode(k, "/", nil, syscall.S_IFDIR, 0755),
 		FS:       k,
 		Children: make(map[string]node.FSNode),
 	}

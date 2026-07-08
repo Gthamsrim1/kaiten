@@ -2,6 +2,7 @@ package persist
 
 import (
 	"bytes"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,6 +10,8 @@ import (
 
 func TestLoad(t *testing.T) {
 	dir := t.TempDir()
+
+	name := testHash("abc123")
 
 	expected := &Filesystem{
 		NextID: 42,
@@ -28,7 +31,7 @@ func TestLoad(t *testing.T) {
 		},
 		Objects: []Object{
 			{
-				ID:   "abc123",
+				ID:   name,
 				Data: []byte("Hello"),
 			},
 		},
@@ -52,7 +55,7 @@ func TestLoad(t *testing.T) {
 	}
 
 	for i := range expected.Nodes {
-		if got.Nodes[i] != expected.Nodes[i] {
+		if got.Nodes[i].ID != expected.Nodes[i].ID {
 			t.Fatalf("node %d mismatch", i)
 		}
 	}
@@ -102,11 +105,12 @@ func TestLoadInvalidMetadata(t *testing.T) {
 
 func TestLoadMissingObject(t *testing.T) {
 	dir := t.TempDir()
+	name := testHash("Homura")
 
 	fs := &Filesystem{
 		Objects: []Object{
 			{
-				ID:   "Homura",
+				ID:   name,
 				Data: []byte("Ai yo"),
 			},
 		},
@@ -116,7 +120,7 @@ func TestLoadMissingObject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := os.Remove(filepath.Join(dir, "objects", "Homura")); err != nil {
+	if err := os.Remove(filepath.Join(dir, "objects", hex.EncodeToString(name[:]))); err != nil {
 		t.Fatal(err)
 	}
 

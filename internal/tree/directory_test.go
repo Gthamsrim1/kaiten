@@ -423,7 +423,7 @@ func TestLookupExistingFile(t *testing.T) {
 		t.Fatal("expected inode")
 	}
 
-	if out.Attr.Mode != syscall.S_IFREG | 0644 {
+	if out.Attr.Mode != syscall.S_IFREG|0644 {
 		t.Fatalf("unexpected mode %o", out.Attr.Mode)
 	}
 }

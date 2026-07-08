@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
@@ -215,7 +216,7 @@ func TestRestoreMissingObject(t *testing.T) {
 		t.Fatal("expected object")
 	}
 
-	if err := os.Remove(filepath.Join(dir, "objects", snap.Objects[0].ID)); err != nil {
+	if err := os.Remove(filepath.Join(dir, "objects", hex.EncodeToString(snap.Objects[0].ID[:]))); err != nil {
 		t.Fatal(err)
 	}
 

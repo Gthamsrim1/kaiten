@@ -1,6 +1,7 @@
 package persist
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -18,15 +19,15 @@ func Load(path string) (*Filesystem, error) {
 	}
 
 	fs := &Filesystem{
-		NextID: meta.NextID,
-		Nodes:  meta.Nodes,
+		NextID:  meta.NextID,
+		Nodes:   meta.Nodes,
 		Objects: make([]Object, 0, len(meta.Objects)),
 	}
 
 	objectDir := filepath.Join(path, "objects")
 
 	for _, ref := range meta.Objects {
-		data, err := os.ReadFile(filepath.Join(objectDir, ref.ID))
+		data, err := os.ReadFile(filepath.Join(objectDir, hex.EncodeToString(ref.ID[:])))
 		if err != nil {
 			return nil, err
 		}

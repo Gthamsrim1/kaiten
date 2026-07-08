@@ -1,6 +1,7 @@
 package persist
 
 import (
+	"encoding/hex"
 	"os"
 	"path/filepath"
 )
@@ -11,11 +12,11 @@ func GC(repo string) error {
 		return err
 	}
 
-	live := make(map[string]struct{})
+	live := map[[32]byte]struct{}{}
 
 	for _, node := range fs.Nodes {
-		if node.ObjectID != nil {
-			live[*node.ObjectID] = struct{}{}
+		for _, chunk := range node.Chunks {
+			live[chunk.Hash] = struct{}{}
 		}
 	}
 
@@ -31,13 +32,23 @@ func GC(repo string) error {
 			continue
 		}
 
-		id := entry.Name()
-
-		if _, ok := live[id]; ok {
+		hashBytes, err := hex.DecodeString(entry.Name())
+		if err != nil {
 			continue
 		}
 
-		if err := os.Remove(filepath.Join(objectDir, id)); err != nil {
+		if len(hashBytes) != 32 {
+			continue
+		}
+
+		var hash [32]byte
+		copy(hash[:], hashBytes)
+
+		if _, ok := live[hash]; ok {
+			continue
+		}
+
+		if err := os.Remove(filepath.Join(objectDir, entry.Name())); err != nil {
 			return err
 		}
 	}

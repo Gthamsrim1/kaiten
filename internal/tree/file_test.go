@@ -138,7 +138,7 @@ func TestFileGetattr(t *testing.T) {
 		t.Fatalf("expected errno 0, got %v", errno)
 	}
 
-	if out.Mode != syscall.S_IFREG | 0644 {
+	if out.Mode != syscall.S_IFREG|0644 {
 		t.Fatalf("unexpected mode %o", out.Mode)
 	}
 

@@ -1,24 +1,37 @@
 package persist
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Gthamsrim1/kaiten/internal/store"
 )
+
+func testHash(s string) [32]byte {
+	return sha256.Sum256([]byte(s))
+}
 
 func TestGCRemovesUnreferencedObject(t *testing.T) {
 	dir := t.TempDir()
 
-	hash1 := "object1"
-	hash2 := "object2"
+	hash1 := testHash("object1")
+	hash2 := testHash("object2")
 
 	fs := &Filesystem{
 		Nodes: []Node{
 			{
-				ID:       1,
-				Name:     "file",
-				Type:     TypeFile,
-				ObjectID: &hash1,
+				ID:   1,
+				Name: "file",
+				Type: TypeFile,
+				Chunks: []store.ChunkRef{
+					{
+						Hash:   hash1,
+						Length: uint32(6),
+					},
+				},
 			},
 		},
 		Objects: []Object{
@@ -41,11 +54,11 @@ func TestGCRemovesUnreferencedObject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "objects", hash1)); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "objects", hex.EncodeToString(hash1[:]))); err != nil {
 		t.Fatal("referenced object was deleted")
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "objects", hash2)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, "objects", hex.EncodeToString(hash2[:]))); !os.IsNotExist(err) {
 		t.Fatal("unreferenced object still exists")
 	}
 }
@@ -53,15 +66,20 @@ func TestGCRemovesUnreferencedObject(t *testing.T) {
 func TestGCKeepsReferencedObject(t *testing.T) {
 	dir := t.TempDir()
 
-	hash := "object"
+	hash := testHash("object")
 
 	fs := &Filesystem{
 		Nodes: []Node{
 			{
-				ID:       1,
-				Name:     "file",
-				Type:     TypeFile,
-				ObjectID: &hash,
+				ID:   1,
+				Name: "file",
+				Type: TypeFile,
+				Chunks: []store.ChunkRef{
+					{
+						Hash:   hash,
+						Length: uint32(len(hash)),
+					},
+				},
 			},
 		},
 		Objects: []Object{
@@ -80,7 +98,7 @@ func TestGCKeepsReferencedObject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "objects", hash)); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "objects", hex.EncodeToString(hash[:]))); err != nil {
 		t.Fatal("referenced object was deleted")
 	}
 }
@@ -111,21 +129,31 @@ func TestGCEmptyRepository(t *testing.T) {
 func TestGCMultipleReferences(t *testing.T) {
 	dir := t.TempDir()
 
-	hash := "shared"
+	hash := testHash("shared")
 
 	fs := &Filesystem{
 		Nodes: []Node{
 			{
-				ID:       1,
-				Name:     "a",
-				Type:     TypeFile,
-				ObjectID: &hash,
+				ID:   1,
+				Name: "a",
+				Type: TypeFile,
+				Chunks: []store.ChunkRef{
+					{
+						Hash:   hash,
+						Length: uint32(len(hash)),
+					},
+				},
 			},
 			{
-				ID:       2,
-				Name:     "b",
-				Type:     TypeFile,
-				ObjectID: &hash,
+				ID:   2,
+				Name: "b",
+				Type: TypeFile,
+				Chunks: []store.ChunkRef{
+					{
+						Hash:   hash,
+						Length: uint32(len(hash)),
+					},
+				},
 			},
 		},
 		Objects: []Object{
@@ -144,7 +172,7 @@ func TestGCMultipleReferences(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "objects", hash)); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "objects", hex.EncodeToString(hash[:]))); err != nil {
 		t.Fatal("shared object was deleted")
 	}
 }
@@ -152,24 +180,34 @@ func TestGCMultipleReferences(t *testing.T) {
 func TestGCDeletesManyObjects(t *testing.T) {
 	dir := t.TempDir()
 
-	hashA := "A"
-	hashB := "B"
-	hashC := "C"
-	hashD := "D"
+	hashA := testHash("A")
+	hashB := testHash("B")
+	hashC := testHash("C")
+	hashD := testHash("D")
 
 	fs := &Filesystem{
 		Nodes: []Node{
 			{
-				ID:       1,
-				Name:     "file1",
-				Type:     TypeFile,
-				ObjectID: &hashA,
+				ID:   1,
+				Name: "file1",
+				Type: TypeFile,
+				Chunks: []store.ChunkRef{
+					{
+						Hash:   hashA,
+						Length: uint32(len(hashA)),
+					},
+				},
 			},
 			{
-				ID:       2,
-				Name:     "file2",
-				Type:     TypeFile,
-				ObjectID: &hashC,
+				ID:   2,
+				Name: "file2",
+				Type: TypeFile,
+				Chunks: []store.ChunkRef{
+					{
+						Hash:   hashC,
+						Length: uint32(len(hashC)),
+					},
+				},
 			},
 		},
 		Objects: []Object{
@@ -188,19 +226,19 @@ func TestGCDeletesManyObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "objects", hashA)); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "objects", hex.EncodeToString(hashA[:]))); err != nil {
 		t.Fatal("A removed")
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "objects", hashC)); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "objects", hex.EncodeToString(hashC[:]))); err != nil {
 		t.Fatal("C removed")
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "objects", hashB)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, "objects", hex.EncodeToString(hashB[:]))); !os.IsNotExist(err) {
 		t.Fatal("B still exists")
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "objects", hashD)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, "objects", hex.EncodeToString(hashD[:]))); !os.IsNotExist(err) {
 		t.Fatal("D still exists")
 	}
 }
@@ -208,15 +246,20 @@ func TestGCDeletesManyObjects(t *testing.T) {
 func TestGCIgnoresSubdirectories(t *testing.T) {
 	dir := t.TempDir()
 
-	hash := "abc"
+	hash := testHash("abc")
 
 	fs := &Filesystem{
 		Nodes: []Node{
 			{
-				ID:       1,
-				Name:     "file",
-				Type:     TypeFile,
-				ObjectID: &hash,
+				ID:   1,
+				Name: "file",
+				Type: TypeFile,
+				Chunks: []store.ChunkRef{
+					{
+						Hash:   hash,
+						Length: uint32(len(hash)),
+					},
+				},
 			},
 		},
 		Objects: []Object{

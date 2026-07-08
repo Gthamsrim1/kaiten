@@ -209,13 +209,13 @@ func (k *KaitenFS) rename(oldParent *Directory, newParent *Directory, oldName st
 }
 
 func (k *KaitenFS) MarkDirty() {
-    k.dirty.Store(true)
+	k.dirty.Store(true)
 }
 
 func (k *KaitenFS) ClearDirty() {
-    k.dirty.Store(false)
+	k.dirty.Store(false)
 }
 
 func (k *KaitenFS) IsDirty() bool {
-    return k.dirty.Load()
+	return k.dirty.Load()
 }

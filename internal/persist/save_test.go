@@ -1,6 +1,7 @@
 package persist
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,6 +10,8 @@ import (
 
 func TestSaveCreatesFiles(t *testing.T) {
 	dir := t.TempDir()
+
+	name := testHash("Kaiten")
 
 	fs := &Filesystem{
 		NextID: 2,
@@ -20,7 +23,7 @@ func TestSaveCreatesFiles(t *testing.T) {
 		},
 		Objects: []Object{
 			{
-				ID:   "abc123",
+				ID:   name,
 				Data: []byte("Homura"),
 			},
 		},
@@ -38,7 +41,7 @@ func TestSaveCreatesFiles(t *testing.T) {
 		t.Fatalf("objects directory not created: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "objects", "abc123")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "objects", hex.EncodeToString(name[:]))); err != nil {
 		t.Fatalf("object file not created: %v", err)
 	}
 }
@@ -46,10 +49,12 @@ func TestSaveCreatesFiles(t *testing.T) {
 func TestSaveWritesObjectData(t *testing.T) {
 	dir := t.TempDir()
 
+	name := testHash("Kaiten")
+
 	fs := &Filesystem{
 		Objects: []Object{
 			{
-				ID:   "object1",
+				ID:   name,
 				Data: []byte("Madoka"),
 			},
 		},
@@ -59,7 +64,7 @@ func TestSaveWritesObjectData(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "objects", "object1"))
+	data, err := os.ReadFile(filepath.Join(dir, "objects", hex.EncodeToString(name[:])))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,6 +76,7 @@ func TestSaveWritesObjectData(t *testing.T) {
 
 func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 	dir := t.TempDir()
+	name := testHash("Kaiten")
 
 	fs := &Filesystem{
 		NextID: 2,
@@ -82,7 +88,7 @@ func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 		},
 		Objects: []Object{
 			{
-				ID:   "Kaiten",
+				ID:   name,
 				Data: []byte("Madoka"),
 			},
 		},
@@ -106,7 +112,7 @@ func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 		t.Fatalf("expected 1 object reference, got %d", len(meta.Objects))
 	}
 
-	if meta.Objects[0].ID != "Kaiten" {
+	if meta.Objects[0].ID != name {
 		t.Fatalf("unexpected object id %q", meta.Objects[0].ID)
 	}
 }

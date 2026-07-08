@@ -1,8 +1,6 @@
 package tree
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"testing"
 
 	"github.com/Gthamsrim1/kaiten/internal/content"
@@ -117,11 +115,12 @@ func TestSnapshotObjectHash(t *testing.T) {
 		t.Fatalf("expected 1 object, got %d", len(snap.Objects))
 	}
 
-	sum := sha256.Sum256(data)
-	expected := hex.EncodeToString(sum[:])
+	if len(snap.Nodes[1].Chunks) != 1 {
+		t.Fatal("expected one chunk")
+	}
 
-	if snap.Objects[0].ID != expected {
-		t.Fatalf("expected hash %q, got %q", expected, snap.Objects[0].ID)
+	if snap.Objects[0].ID != snap.Nodes[1].Chunks[0].Hash {
+		t.Fatal("object hash does not match chunk reference")
 	}
 }
 
@@ -197,7 +196,7 @@ func TestSnapshotDifferentObjects(t *testing.T) {
 	}
 }
 
-func TestSnapshotNodeObjectIDs(t *testing.T) {
+func TestSnapshotNodeChunks(t *testing.T) {
 	fs := newTestFS()
 
 	data := []byte("hello")
@@ -212,20 +211,21 @@ func TestSnapshotNodeObjectIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sum := sha256.Sum256(data)
-	expected := hex.EncodeToString(sum[:])
-
 	for _, n := range snap.Nodes {
 		if n.ID != file.ID {
 			continue
 		}
 
-		if n.ObjectID == nil {
-			t.Fatal("file ObjectID should not be nil")
+		if len(n.Chunks) != 1 {
+			t.Fatalf("expected 1 chunk, got %d", len(n.Chunks))
 		}
 
-		if *n.ObjectID != expected {
-			t.Fatalf("expected %q, got %q", expected, *n.ObjectID)
+		if n.Chunks[0].Length != uint32(len(data)) {
+			t.Fatal("incorrect chunk length")
+		}
+
+		if n.Chunks[0].Hash != snap.Objects[0].ID {
+			t.Fatal("chunk hash does not match object")
 		}
 
 		return

@@ -1,16 +1,16 @@
 package tree
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"sort"
 
+	"github.com/Gthamsrim1/kaiten/internal/chunk"
 	"github.com/Gthamsrim1/kaiten/internal/node"
 	"github.com/Gthamsrim1/kaiten/internal/persist"
+	"github.com/Gthamsrim1/kaiten/internal/store"
 )
 
-func (fs *KaitenFS) snapshotNode(n node.FSNode, parentID uint64, snap *persist.Filesystem, objects map[string]struct{}) error {
+func (fs *KaitenFS) snapshotNode(n node.FSNode, parentID uint64, snap *persist.Filesystem, objects map[[32]byte]struct{}) error {
 	meta := n.GetNode()
 
 	record := persist.Node{
@@ -27,8 +27,6 @@ func (fs *KaitenFS) snapshotNode(n node.FSNode, parentID uint64, snap *persist.F
 		Atime: meta.Atime,
 		Mtime: meta.Mtime,
 		Ctime: meta.Ctime,
-
-		ObjectID: meta.ObjectID,
 	}
 
 	switch v := n.(type) {
@@ -52,20 +50,30 @@ func (fs *KaitenFS) snapshotNode(n node.FSNode, parentID uint64, snap *persist.F
 		record.Type = persist.TypeFile
 		data := v.Content.Bytes()
 
-		sum := sha256.Sum256(data)
-		hash := hex.EncodeToString(sum[:])
+		chunks, err := chunk.Split(data, chunk.Default)
+		if err != nil {
+			return err
+		}
 
-		record.ObjectID = &hash
-		snap.Nodes = append(snap.Nodes, record)
+		for _, c := range chunks {
+			record.Chunks = append(record.Chunks, store.ChunkRef{
+				Hash:   c.Hash,
+				Length: uint32(len(c.Data)),
+			})
 
-		if _, ok := objects[hash]; !ok {
-			objects[hash] = struct{}{}
+			if _, ok := objects[c.Hash]; ok {
+				continue
+			}
+
+			objects[c.Hash] = struct{}{}
 
 			snap.Objects = append(snap.Objects, persist.Object{
-				ID:   hash,
-				Data: data,
+				ID:   c.Hash,
+				Data: c.Data,
 			})
 		}
+
+		snap.Nodes = append(snap.Nodes, record)
 
 	default:
 		return fmt.Errorf("unknown node type %T", n)
@@ -79,7 +87,7 @@ func (fs *KaitenFS) Snapshot() (*persist.Filesystem, error) {
 		NextID: fs.CurrentID(),
 	}
 
-	objects := make(map[string]struct{})
+	objects := make(map[[32]byte]struct{})
 
 	if err := fs.snapshotNode(fs.Root, 0, snap, objects); err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 package persist
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -17,8 +18,8 @@ func Save(path string, snapshot *Filesystem) error {
 	}
 
 	meta := Metadata{
-		NextID: snapshot.NextID,
-		Nodes:  snapshot.Nodes,
+		NextID:  snapshot.NextID,
+		Nodes:   snapshot.Nodes,
 		Objects: make([]ObjectRef, len(snapshot.Objects)),
 	}
 
@@ -36,7 +37,7 @@ func Save(path string, snapshot *Filesystem) error {
 	}
 
 	for _, object := range snapshot.Objects {
-		objectPath := filepath.Join(objectDir, object.ID)
+		objectPath := filepath.Join(objectDir, hex.EncodeToString(object.ID[:]))
 
 		if _, err := os.Stat(objectPath); err == nil {
 			continue

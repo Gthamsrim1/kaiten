@@ -17,7 +17,7 @@ func Restore(repo string) (*KaitenFS, error) {
 	fs := New()
 	fs.ID.Store(pfs.NextID)
 
-	objects := make(map[string][]byte, len(pfs.Objects))
+	objects := make(map[[32]byte][]byte, len(pfs.Objects))
 	for _, obj := range pfs.Objects {
 		objects[obj.ID] = obj.Data
 	}
@@ -36,9 +36,14 @@ func Restore(repo string) (*KaitenFS, error) {
 
 		case persist.TypeFile:
 			var data []byte
-			data, ok := objects[*n.ObjectID]
-			if !ok {
-				return nil, fmt.Errorf("missing object %s", *n.ObjectID)
+
+			for _, c := range n.Chunks {
+				chunkData, ok := objects[c.Hash]
+				if !ok {
+					return nil, fmt.Errorf("missing object %x", c.Hash)
+				}
+
+				data = append(data, chunkData...)
 			}
 
 			nodes[n.ID] = &File{
@@ -84,6 +89,7 @@ func restoreNode(n persist.Node) node.Node {
 		ID:     n.ID,
 		Name:   n.Name,
 		Mode:   n.Mode,
+		Chunks: n.Chunks,
 		UID:    n.UID,
 		GID:    n.GID,
 		Nlink:  n.Nlink,

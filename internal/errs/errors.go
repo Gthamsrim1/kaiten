@@ -95,10 +95,10 @@ func ToErrno(err error) syscall.Errno {
 
 	case errors.Is(err, ErrInvalidOperation):
 		return syscall.ENOSYS
-	
+
 	case errors.Is(err, ErrNotEmpty):
 		return syscall.ENOTEMPTY
-	
+
 	case errors.Is(err, ErrRefUnderflow):
 		return syscall.EIO
 

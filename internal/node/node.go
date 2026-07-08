@@ -5,6 +5,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Gthamsrim1/kaiten/internal/store"
 	"golang.org/x/sys/unix"
 )
 
@@ -23,10 +24,10 @@ type AttrUpdate struct {
 type Node struct {
 	mu sync.RWMutex
 
-	ID       uint64
-	Name     string
-	Parent   FSNode
-	ObjectID *string
+	ID     uint64
+	Name   string
+	Parent FSNode
+	Chunks []store.ChunkRef
 
 	Mode  uint32
 	UID   uint32

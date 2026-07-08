@@ -1,6 +1,10 @@
 package persist
 
-import "time"
+import (
+	"time"
+
+	"github.com/Gthamsrim1/kaiten/internal/store"
+)
 
 type NodeType uint8
 
@@ -10,42 +14,42 @@ const (
 )
 
 type Node struct {
-    ID       uint64
-    ParentID uint64
+	ID       uint64
+	ParentID uint64
 
-    Name string
+	Name string
 
-    Type NodeType
+	Type NodeType
 
-    Mode  uint32
-    UID   uint32
-    GID   uint32
-    Nlink uint32
+	Chunks []store.ChunkRef
 
-    Atime time.Time
-    Mtime time.Time
-    Ctime time.Time
+	Mode  uint32
+	UID   uint32
+	GID   uint32
+	Nlink uint32
 
-    ObjectID *string
+	Atime time.Time
+	Mtime time.Time
+	Ctime time.Time
 }
 
 type Filesystem struct {
-    NextID uint64
-    Nodes []Node
-    Objects []Object
+	NextID  uint64
+	Nodes   []Node
+	Objects []Object
 }
 
 type Metadata struct {
-	NextID uint64
+	NextID  uint64
 	Nodes   []Node
 	Objects []ObjectRef `json:"objects"`
 }
 
 type ObjectRef struct {
-	ID string `json:"id"`
+	ID [32]byte `json:"id"`
 }
 
 type Object struct {
-    ID   string
-    Data []byte
+	ID   [32]byte
+	Data []byte
 }

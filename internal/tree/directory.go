@@ -81,10 +81,10 @@ func (d *Directory) Mount(ctx context.Context, node node.FSNode) *gofuse.Inode {
 }
 
 func (d *Directory) Create(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (node *gofuse.Inode, fh gofuse.FileHandle, fuseFlags uint32, errno syscall.Errno) {
-	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK|unix.X_OK); errno != 0 {
 		return nil, nil, 0, errno
 	}
-	
+
 	file, err := d.CreateFile(name, content.Memory(nil), 0644)
 	if err != nil {
 		return nil, nil, 0, errs.ToErrno(err)
@@ -102,7 +102,7 @@ func (d *Directory) Create(ctx context.Context, name string, flags uint32, mode 
 }
 
 func (d *Directory) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (node *gofuse.Inode, errno syscall.Errno) {
-	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK|unix.X_OK); errno != 0 {
 		return nil, errno
 	}
 
@@ -158,7 +158,7 @@ func (d *Directory) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 }
 
 func (d *Directory) Readdir(ctx context.Context) (gofuse.DirStream, syscall.Errno) {
-	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.R_OK | unix.X_OK); errno != 0 {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.R_OK|unix.X_OK); errno != 0 {
 		return nil, errno
 	}
 
@@ -179,7 +179,7 @@ func (d *Directory) Readdir(ctx context.Context) (gofuse.DirStream, syscall.Errn
 }
 
 func (d *Directory) Unlink(ctx context.Context, name string) syscall.Errno {
-	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK|unix.X_OK); errno != 0 {
 		return errno
 	}
 
@@ -225,7 +225,7 @@ func (d *Directory) Setattr(ctx context.Context, f gofuse.FileHandle, in *fuse.S
 }
 
 func (d *Directory) Rmdir(ctx context.Context, name string) syscall.Errno {
-	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK|unix.X_OK); errno != 0 {
 		return errno
 	}
 
@@ -252,17 +252,13 @@ func (d *Directory) Rmdir(ctx context.Context, name string) syscall.Errno {
 }
 
 func (d *Directory) Rename(ctx context.Context, name string, newParent gofuse.InodeEmbedder, newName string, flags uint32) syscall.Errno {
-	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK | unix.X_OK); errno != 0 {
+	if errno := fuseutil.RequireAccess(ctx, &d.Node, unix.W_OK|unix.X_OK); errno != 0 {
 		return errno
 	}
 
 	dir, ok := newParent.(*Directory)
 	if !ok {
 		return syscall.EIO
-	}
-
-	if errno := fuseutil.RequireAccess(ctx, &dir.Node, unix.W_OK | unix.X_OK); errno != 0 {
-		return errno
 	}
 
 	if err := d.FS.rename(d, dir, name, newName); err != nil {
@@ -296,6 +292,18 @@ func (d *Directory) Rename(ctx context.Context, name string, newParent gofuse.In
 
 func (d *Directory) Access(ctx context.Context, mask uint32) syscall.Errno {
 	return fuseutil.RequireAccess(ctx, &d.Node, mask)
+}
+
+func (d *Directory) ChildrenSnapshot() map[string]node.FSNode {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	children := make(map[string]node.FSNode, len(d.Children))
+	for name, child := range d.Children {
+		children[name] = child
+	}
+
+	return children
 }
 
 var _ gofuse.NodeCreater = (*Directory)(nil)

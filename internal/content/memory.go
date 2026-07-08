@@ -61,7 +61,7 @@ func (m *MemoryContent) Resize(size uint64) error {
 	}
 
 	return nil
-} 
+}
 
 // Bytes returns a copy of the underlying data. Intended for tests/debugging —
 // prefer Read/Size for normal I/O.

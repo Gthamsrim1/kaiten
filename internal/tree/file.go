@@ -37,20 +37,20 @@ func (f *File) Getattr(ctx context.Context, fh gofuse.FileHandle, out *fuse.Attr
 
 func (f *File) Open(ctx context.Context, flags uint32) (gofuse.FileHandle, uint32, syscall.Errno) {
 	switch flags & syscall.O_ACCMODE {
-		case syscall.O_RDONLY:
-			if errno := fuseutil.RequireAccess(ctx, &f.Node, unix.R_OK); errno != 0 {
-				return nil, 0, errno
-			}
+	case syscall.O_RDONLY:
+		if errno := fuseutil.RequireAccess(ctx, &f.Node, unix.R_OK); errno != 0 {
+			return nil, 0, errno
+		}
 
-		case syscall.O_WRONLY:
-			if errno := fuseutil.RequireAccess(ctx, &f.Node, unix.W_OK); errno != 0 {
-				return nil, 0, errno
-			}
+	case syscall.O_WRONLY:
+		if errno := fuseutil.RequireAccess(ctx, &f.Node, unix.W_OK); errno != 0 {
+			return nil, 0, errno
+		}
 
-		case syscall.O_RDWR:
-			if errno := fuseutil.RequireAccess(ctx, &f.Node, unix.R_OK|unix.W_OK); errno != 0 {
-				return nil, 0, errno
-			}
+	case syscall.O_RDWR:
+		if errno := fuseutil.RequireAccess(ctx, &f.Node, unix.R_OK|unix.W_OK); errno != 0 {
+			return nil, 0, errno
+		}
 	}
 
 	return nil, fuse.FOPEN_DIRECT_IO, 0
@@ -116,7 +116,7 @@ func (f *File) Setattr(ctx context.Context, fh gofuse.FileHandle, in *fuse.SetAt
 }
 
 func (f *File) Access(ctx context.Context, mask uint32) syscall.Errno {
-    return fuseutil.RequireAccess(ctx, &f.Node, mask)
+	return fuseutil.RequireAccess(ctx, &f.Node, mask)
 }
 
 var _ gofuse.NodeGetattrer = (*File)(nil)
