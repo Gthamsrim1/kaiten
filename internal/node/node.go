@@ -38,7 +38,7 @@ type Node struct {
 	Ctime time.Time
 }
 
-func (n *Node) UpdateAttr(update AttrUpdate) {
+func (n *Node) UpdateAttr(update AttrUpdate) bool {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
@@ -72,6 +72,8 @@ func (n *Node) UpdateAttr(update AttrUpdate) {
 	if changed {
 		n.Ctime = time.Now()
 	}
+
+	return changed
 }
 
 func (n *Node) CheckAccess(uid, gid uint32, mask uint32) syscall.Errno {

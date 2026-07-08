@@ -30,18 +30,22 @@ func (d *Directory) GetNode() *node.Node {
 }
 
 func (d *Directory) CreateFile(name string, content content.Content, perm uint32) (*File, error) {
+	d.FS.MarkDirty()
 	return d.FS.createFile(name, d, content, perm)
 }
 
 func (d *Directory) DeleteFile(name string) error {
+	d.FS.MarkDirty()
 	return d.FS.deleteFile(name, d)
 }
 
 func (d *Directory) CreateDirectory(name string, perm uint32) (*Directory, error) {
+	d.FS.MarkDirty()
 	return d.FS.createDirectory(name, d, perm)
 }
 
 func (d *Directory) DeleteDirectory(name string) error {
+	d.FS.MarkDirty()
 	return d.FS.deleteDirectory(name, d)
 }
 
@@ -206,12 +210,16 @@ func (d *Directory) Setattr(ctx context.Context, f gofuse.FileHandle, in *fuse.S
 		return errno
 	}
 
-	d.Node.UpdateAttr(fuseutil.UpdateAttributes(in))
+	changed := d.Node.UpdateAttr(fuseutil.UpdateAttributes(in))
 
 	out.Mode = d.Node.Mode
 	out.Uid = d.Node.UID
 	out.Gid = d.Node.GID
 	out.SetTimes(&d.Node.Atime, &d.Node.Mtime, &d.Node.Ctime)
+
+	if changed {
+		d.FS.MarkDirty()
+	}
 
 	return 0
 }
@@ -280,6 +288,8 @@ func (d *Directory) Rename(ctx context.Context, name string, newParent gofuse.In
 	if exists {
 		dir.AddChild(newName, mounted, true)
 	}
+
+	d.FS.MarkDirty()
 
 	return 0
 }

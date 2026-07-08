@@ -13,6 +13,7 @@ import (
 type KaitenFS struct {
 	Root    *Directory
 	ID      atomic.Uint64
+	dirty	atomic.Bool
 	mu      sync.Mutex
 	mounted map[uint64]*gofuse.Inode
 }

@@ -14,8 +14,8 @@ func Restore(repo string) (*KaitenFS, error) {
 		return nil, err
 	}
 
-	kfs := New()
-	kfs.ID.Store(pfs.NextID)
+	fs := New()
+	fs.ID.Store(pfs.NextID)
 
 	objects := make(map[string][]byte, len(pfs.Objects))
 	for _, obj := range pfs.Objects {
@@ -30,7 +30,7 @@ func Restore(repo string) (*KaitenFS, error) {
 		case persist.TypeDirectory:
 			nodes[n.ID] = &Directory{
 				Node:     restoreNode(n),
-				FS:       kfs,
+				FS:       fs,
 				Children: make(map[string]node.FSNode),
 			}
 
@@ -43,6 +43,7 @@ func Restore(repo string) (*KaitenFS, error) {
 
 			nodes[n.ID] = &File{
 				Node:    restoreNode(n),
+				FS:      fs,
 				Content: content.Memory(data),
 			}
 		}
@@ -53,7 +54,7 @@ func Restore(repo string) (*KaitenFS, error) {
 
 		if n.ParentID == 0 {
 			root := current.(*Directory)
-			kfs.Root = root
+			fs.Root = root
 			root.Node.Parent = nil
 			continue
 		}
@@ -75,7 +76,7 @@ func Restore(repo string) (*KaitenFS, error) {
 		parent.mu.Unlock()
 	}
 
-	return kfs, nil
+	return fs, nil
 }
 
 func restoreNode(n persist.Node) node.Node {

@@ -70,6 +70,7 @@ func (k *KaitenFS) createFile(name string, parent *Directory, content content.Co
 
 	file := &File{
 		Node:    newNode(k, name, parent, syscall.S_IFREG, perm),
+		FS:      k,
 		Content: content,
 	}
 
@@ -138,11 +139,11 @@ func (k *KaitenFS) deleteDirectory(name string, parent *Directory) error {
 	return nil
 }
 
-func newNode(fs *KaitenFS, name string, parent *Directory, fileType uint32, perm uint32) node.Node {
+func newNode(k *KaitenFS, name string, parent *Directory, fileType uint32, perm uint32) node.Node {
 	now := time.Now()
 
 	return node.Node{
-		ID:     fs.nextID(),
+		ID:     k.nextID(),
 		Name:   name,
 		Parent: parent,
 		Mode:   fileType | perm,
@@ -205,4 +206,16 @@ func (k *KaitenFS) rename(oldParent *Directory, newParent *Directory, oldName st
 
 	newParent.Children[newName] = node
 	return nil
+}
+
+func (k *KaitenFS) MarkDirty() {
+    k.dirty.Store(true)
+}
+
+func (k *KaitenFS) ClearDirty() {
+    k.dirty.Store(false)
+}
+
+func (k *KaitenFS) IsDirty() bool {
+    return k.dirty.Load()
 }

@@ -18,6 +18,7 @@ type File struct {
 	gofuse.Inode
 
 	node.Node
+	FS      *KaitenFS
 	Content content.Content
 }
 
@@ -69,6 +70,10 @@ func (f *File) Write(ctx context.Context, fh gofuse.FileHandle, data []byte, off
 	f.Node.Mtime = now
 	f.Node.Ctime = now
 
+	if n > 0 {
+		f.FS.MarkDirty()
+	}
+
 	return uint32(n), 0
 }
 
@@ -104,6 +109,8 @@ func (f *File) Setattr(ctx context.Context, fh gofuse.FileHandle, in *fuse.SetAt
 	out.Uid = f.Node.UID
 	out.Gid = f.Node.GID
 	out.SetTimes(&f.Node.Atime, &f.Node.Mtime, &f.Node.Ctime)
+
+	f.FS.MarkDirty()
 
 	return 0
 }
