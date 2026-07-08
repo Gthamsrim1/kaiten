@@ -15,7 +15,7 @@ func setupBenchMount(b *testing.B) (mountDir string, cleanup func()) {
 		b.Fatal(err)
 	}
 
-	server, _, err := Mount(mountDir, false)
+	_, server, _, err := Mount("./kaiten-data", mountDir, false)
 	if err != nil {
 		os.RemoveAll(mountDir)
 		b.Fatal(err)

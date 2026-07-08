@@ -11,7 +11,7 @@ import (
 func TestNewFile(t *testing.T) {
 	fs := newTestFS()
 
-	file, err := fs.Root.CreateFile("file", content.Memory([]byte("Madoka")))
+	file, err := fs.Root.CreateFile("file", content.Memory([]byte("Madoka")), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestNewFile(t *testing.T) {
 func TestFileRead(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Madoka")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Madoka")), 0644)
 
 	buf := make([]byte, 6)
 
@@ -54,7 +54,7 @@ func TestFileRead(t *testing.T) {
 func TestFileWrite(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
+	file, _ := fs.Root.CreateFile("file", content.Memory(nil), 0644)
 
 	n, errno := file.Write(testContext(), nil, []byte("Madoka"), 0)
 	if errno != 0 {
@@ -75,7 +75,7 @@ func TestFileWrite(t *testing.T) {
 func TestFileOverwrite(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Homura")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Homura")), 0644)
 
 	_, errno := file.Write(testContext(), nil, []byte("M"), 0)
 	if errno != 0 {
@@ -92,7 +92,7 @@ func TestFileOverwrite(t *testing.T) {
 func TestFileAppend(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Kyoko")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Kyoko")), 0644)
 
 	_, errno := file.Write(testContext(), nil, []byte(" Sakura"), 5)
 	if errno != 0 {
@@ -109,7 +109,7 @@ func TestFileAppend(t *testing.T) {
 func TestFileOpen(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
+	file, _ := fs.Root.CreateFile("file", content.Memory(nil), 0644)
 
 	fh, flags, errno := file.Open(testContext(), 0)
 
@@ -129,7 +129,7 @@ func TestFileOpen(t *testing.T) {
 func TestFileGetattr(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Homura")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Homura")), 0644)
 
 	var out fuse.AttrOut
 
@@ -150,7 +150,7 @@ func TestFileGetattr(t *testing.T) {
 func TestEmptyFile(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
+	file, _ := fs.Root.CreateFile("file", content.Memory(nil), 0644)
 
 	buf := make([]byte, 10)
 
@@ -172,7 +172,7 @@ func TestEmptyFile(t *testing.T) {
 func TestFileReadOffset(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("abcdef")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("abcdef")), 0644)
 
 	buf := make([]byte, 4)
 
@@ -194,7 +194,7 @@ func TestFileReadOffset(t *testing.T) {
 func TestFileTruncateSmaller(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Hello World")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Hello World")), 0644)
 
 	var in fuse.SetAttrIn
 	in.Valid = fuse.FATTR_SIZE
@@ -221,7 +221,7 @@ func TestFileTruncateSmaller(t *testing.T) {
 func TestFileExtend(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Hello")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("Hello")), 0644)
 
 	var in fuse.SetAttrIn
 	in.Valid = fuse.FATTR_SIZE
@@ -252,7 +252,7 @@ func TestFileExtend(t *testing.T) {
 func TestFileWriteMiddle(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("abcdef")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("abcdef")), 0644)
 
 	_, errno := file.Write(testContext(), nil, []byte("XYZ"), 3)
 	if errno != 0 {
@@ -269,7 +269,7 @@ func TestFileWriteMiddle(t *testing.T) {
 func TestReadPastEOF(t *testing.T) {
 	fs := newTestFS()
 
-	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("abc")))
+	file, _ := fs.Root.CreateFile("file", content.Memory([]byte("abc")), 0644)
 
 	buf := make([]byte, 10)
 

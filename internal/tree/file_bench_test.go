@@ -9,7 +9,7 @@ import (
 
 func BenchmarkFileRead(b *testing.B) {
 	fs := newTestFS()
-	file, _ := fs.Root.CreateFile("file", content.Memory(make([]byte, 4096)))
+	file, _ := fs.Root.CreateFile("file", content.Memory(make([]byte, 4096)), 0644)
 	buf := make([]byte, 4096)
 	ctx := testContext()
 
@@ -21,7 +21,7 @@ func BenchmarkFileRead(b *testing.B) {
 
 func BenchmarkFileWrite(b *testing.B) {
 	fs := newTestFS()
-	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
+	file, _ := fs.Root.CreateFile("file", content.Memory(nil), 0644)
 	data := make([]byte, 4096)
 
 	b.ResetTimer()
@@ -32,7 +32,7 @@ func BenchmarkFileWrite(b *testing.B) {
 
 func BenchmarkFileGetattr(b *testing.B) {
 	fs := newTestFS()
-	file, _ := fs.Root.CreateFile("file", content.Memory(make([]byte, 4096)))
+	file, _ := fs.Root.CreateFile("file", content.Memory(make([]byte, 4096)), 0644)
 	ctx := testContext()
 	var out fuse.AttrOut
 
@@ -46,7 +46,7 @@ func BenchmarkFileGetattr(b *testing.B) {
 // text editor or log writer would hit the file.
 func BenchmarkFileAppendPattern(b *testing.B) {
 	fs := newTestFS()
-	file, _ := fs.Root.CreateFile("file", content.Memory(nil))
+	file, _ := fs.Root.CreateFile("file", content.Memory(nil), 0644)
 	chunk := []byte("line of text\n")
 
 	b.ResetTimer()

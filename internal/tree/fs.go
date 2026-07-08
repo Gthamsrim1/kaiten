@@ -3,6 +3,7 @@ package tree
 import (
 	"sync"
 	"sync/atomic"
+	"syscall"
 
 	"github.com/Gthamsrim1/kaiten/internal/content"
 	"github.com/Gthamsrim1/kaiten/internal/node"
@@ -25,27 +26,27 @@ func New() *KaitenFS {
 
 func (k *KaitenFS) Seed() {
 	root := k.Root
-	_, err := root.CreateFile("hello", content.Memory([]byte("Hello from KaitenFS!\n")))
+	_, err := root.CreateFile("hello", content.Memory([]byte("Hello from KaitenFS!\n")), 0644)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = root.CreateFile("readme", content.Memory([]byte("Welcome to KaitenFS!\n")))
+	_, err = root.CreateFile("readme", content.Memory([]byte("Homura did nothing wrong!\n")), 0644)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = root.CreateDirectory("bin")
+	_, err = root.CreateDirectory("bin", 0755)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = root.CreateDirectory("lib")
+	_, err = root.CreateDirectory("lib", 0755)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = root.CreateDirectory("usr")
+	_, err = root.CreateDirectory("usr", 0755)
 	if err != nil {
 		panic(err)
 	}
@@ -53,10 +54,7 @@ func (k *KaitenFS) Seed() {
 
 func (k *KaitenFS) newRoot() *Directory {
 	return &Directory{
-		Node: node.Node{
-			ID:   k.nextID(),
-			Name: "/",
-		},
+		Node: 	  newNode(k, "/", nil, syscall.S_IFDIR, 0755),
 		FS:       k,
 		Children: make(map[string]node.FSNode),
 	}
@@ -64,4 +62,8 @@ func (k *KaitenFS) newRoot() *Directory {
 
 func (k *KaitenFS) nextID() uint64 {
 	return k.ID.Add(1)
+}
+
+func (k *KaitenFS) CurrentID() uint64 {
+	return k.ID.Load()
 }

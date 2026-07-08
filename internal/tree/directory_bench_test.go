@@ -16,7 +16,7 @@ func BenchmarkCreateFile(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// name must be unique per iteration — CreateFile errors on collision
 		name := fmt.Sprintf("file-%d", i)
-		_, _ = fs.Root.CreateFile(name, content.Memory(nil))
+		_, _ = fs.Root.CreateFile(name, content.Memory(nil), 0644)
 	}
 }
 
@@ -26,7 +26,7 @@ func BenchmarkCreateDirectory(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		name := fmt.Sprintf("dir-%d", i)
-		_, _ = fs.Root.CreateDirectory(name)
+		_, _ = fs.Root.CreateDirectory(name, 0755)
 	}
 }
 
@@ -35,7 +35,7 @@ func BenchmarkDeleteFile(b *testing.B) {
 	names := make([]string, b.N)
 	for i := 0; i < b.N; i++ {
 		names[i] = fmt.Sprintf("file-%d", i)
-		_, _ = fs.Root.CreateFile(names[i], content.Memory(nil))
+		_, _ = fs.Root.CreateFile(names[i], content.Memory(nil), 0644)
 	}
 
 	b.ResetTimer()
@@ -49,7 +49,7 @@ func BenchmarkDeleteFile(b *testing.B) {
 func benchmarkLookup(b *testing.B, n int) {
 	fs := newTestFS()
 	for i := 0; i < n; i++ {
-		_, _ = fs.Root.CreateFile(fmt.Sprintf("file-%d", i), content.Memory(nil))
+		_, _ = fs.Root.CreateFile(fmt.Sprintf("file-%d", i), content.Memory(nil), 0644)
 	}
 	ctx := testContext()
 
@@ -75,7 +75,7 @@ func BenchmarkLookup_10000(b *testing.B) {
 func benchmarkReaddir(b *testing.B, n int) {
 	fs := newTestFS()
 	for i := 0; i < n; i++ {
-		_, _ = fs.Root.CreateFile(fmt.Sprintf("file-%d", i), content.Memory(nil))
+		_, _ = fs.Root.CreateFile(fmt.Sprintf("file-%d", i), content.Memory(nil), 0644)
 	}
 	ctx := testContext()
 
@@ -105,7 +105,7 @@ func BenchmarkCreateFileParallel(b *testing.B) {
 		for pb.Next() {
 			id := atomic.AddInt64(&counter, 1)
 			name := fmt.Sprintf("file-%d", id)
-			_, _ = fs.Root.CreateFile(name, content.Memory(nil))
+			_, _ = fs.Root.CreateFile(name, content.Memory(nil), 0644)
 		}
 	})
 }
@@ -114,7 +114,7 @@ func BenchmarkRename(b *testing.B) {
 	fs := newTestFS()
 	for i := 0; i < b.N; i++ {
 		name := fmt.Sprintf("file%d", i)
-		if _, err := fs.Root.CreateFile(name, content.Memory(nil)); err != nil {
+		if _, err := fs.Root.CreateFile(name, content.Memory(nil), 0644); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -134,15 +134,15 @@ func BenchmarkRename(b *testing.B) {
 // exercising the cross-parent path without growing memory with b.N.
 func BenchmarkRenameMove(b *testing.B) {
 	fs := newTestFS()
-	src, err := fs.Root.CreateDirectory("src")
+	src, err := fs.Root.CreateDirectory("src", 0755)
 	if err != nil {
 		b.Fatal(err)
 	}
-	dst, err := fs.Root.CreateDirectory("dst")
+	dst, err := fs.Root.CreateDirectory("dst", 0755)
 	if err != nil {
 		b.Fatal(err)
 	}
-	if _, err := src.CreateFile("file", content.Memory(nil)); err != nil {
+	if _, err := src.CreateFile("file", content.Memory(nil), 0644); err != nil {
 		b.Fatal(err)
 	}
 

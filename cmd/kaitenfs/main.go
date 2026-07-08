@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/Gthamsrim1/kaiten/internal/mountfs"
+	"github.com/Gthamsrim1/kaiten/internal/persist"
 )
 
 func main() {
@@ -16,22 +17,42 @@ func main() {
 	flag.Parse()
 
 	args := flag.Args()
-	if len(args) != 1 {
-		fmt.Println("Usage: kaitenfs [-debug] <mountpoint>")
+
+	var (
+		mountPoint string
+		repo       = "./kaiten-data"
+	)
+
+	switch len(args) {
+	case 1:
+		mountPoint = args[0]
+	case 2:
+		repo = args[0]
+		mountPoint = args[1]
+	default:
+		fmt.Println("Usage:")
+		fmt.Println("  kaitenfs [-debug] <mountpoint>")
+		fmt.Println("  kaitenfs [-debug] <repository> <mountpoint>")
 		os.Exit(1)
 	}
-	mountPoint := args[0]
 
-	server, createdMountPoint, err := mountfs.Mount(mountPoint, *debug)
+	fs, server, createdMountPoint, err := mountfs.Mount(repo, mountPoint, *debug)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(
+		sigChan,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+
 	go func() {
 		<-sigChan
 		log.Println("received shutdown signal, unmounting...")
+
 		if err := server.Unmount(); err != nil {
 			log.Printf("unmount failed: %v (try: fusermount -u %s)", err, mountPoint)
 		}
@@ -39,7 +60,21 @@ func main() {
 
 	server.Wait()
 
+	snapshot, err := fs.Snapshot()
+	if err != nil {
+		if createdMountPoint {
+			_ = os.Remove(mountPoint)
+		}
+		log.Fatal(err)
+	}
+
+	saveErr := persist.Save(repo, snapshot)
+
 	if createdMountPoint {
-		os.Remove(mountPoint)
+		_ = os.Remove(mountPoint)
+	}
+
+	if saveErr != nil {
+		log.Fatal(saveErr)
 	}
 }

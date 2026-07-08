@@ -63,13 +63,13 @@ func (k *KaitenFS) validateExistingChild(name string, parent *Directory) (node.F
 	return node, nil
 }
 
-func (k *KaitenFS) createFile(name string, parent *Directory, content content.Content) (*File, error) {
+func (k *KaitenFS) createFile(name string, parent *Directory, content content.Content, perm uint32) (*File, error) {
 	if err := k.validateNewChild(name, parent); err != nil {
 		return nil, err
 	}
 
 	file := &File{
-		Node:    newNode(k, name, parent, syscall.S_IFREG | 0644),
+		Node:    newNode(k, name, parent, syscall.S_IFREG, perm),
 		Content: content,
 	}
 
@@ -80,13 +80,13 @@ func (k *KaitenFS) createFile(name string, parent *Directory, content content.Co
 	return file, nil
 }
 
-func (k *KaitenFS) createDirectory(name string, parent *Directory) (*Directory, error) {
+func (k *KaitenFS) createDirectory(name string, parent *Directory, perm uint32) (*Directory, error) {
 	if err := k.validateNewChild(name, parent); err != nil {
 		return nil, err
 	}
 
 	directory := &Directory{
-		Node:     newNode(k, name, parent, syscall.S_IFDIR), // fixed
+		Node:     newNode(k, name, parent, syscall.S_IFDIR, perm),
 		FS:       k,
 		Children: make(map[string]node.FSNode),
 	}
@@ -138,20 +138,21 @@ func (k *KaitenFS) deleteDirectory(name string, parent *Directory) error {
 	return nil
 }
 
-func newNode(fs *KaitenFS, name string, parent *Directory, mode uint32) node.Node {
-    now := time.Now()
+func newNode(fs *KaitenFS, name string, parent *Directory, fileType uint32, perm uint32) node.Node {
+	now := time.Now()
 
-    return node.Node{
-        ID:     fs.nextID(),
-        Name:   name,
-        Parent: parent,
-        Mode:   mode,
-        UID:    uint32(os.Getuid()),
-        GID:    uint32(os.Getgid()),
-        Atime:  now,
-        Mtime:  now,
-        Ctime:  now,
-    }
+	return node.Node{
+		ID:     fs.nextID(),
+		Name:   name,
+		Parent: parent,
+		Mode:   fileType | perm,
+		UID:    uint32(os.Getuid()),
+		GID:    uint32(os.Getgid()),
+		Nlink:  1,
+		Atime:  now,
+		Mtime:  now,
+		Ctime:  now,
+	}
 }
 
 func (k *KaitenFS) rename(oldParent *Directory, newParent *Directory, oldName string, newName string) error {

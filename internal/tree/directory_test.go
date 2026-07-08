@@ -11,7 +11,7 @@ import (
 
 func TestCreateFile(t *testing.T) {
 	fs := newTestFS()
-	file, err := fs.Root.CreateFile("file", content.Memory([]byte("Hello")))
+	file, err := fs.Root.CreateFile("file", content.Memory([]byte("Hello")), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func TestCreateFile(t *testing.T) {
 
 func TestDeleteFile(t *testing.T) {
 	fs := newTestFS()
-	_, err := fs.Root.CreateFile("file", content.Memory([]byte("Hello")))
+	_, err := fs.Root.CreateFile("file", content.Memory([]byte("Hello")), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestDeleteFile(t *testing.T) {
 
 func TestDeleteDirectory(t *testing.T) {
 	fs := newTestFS()
-	_, err := fs.Root.CreateDirectory("dir")
+	_, err := fs.Root.CreateDirectory("dir", 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestDeleteDirectory(t *testing.T) {
 
 func TestCreateDirectory(t *testing.T) {
 	fs := newTestFS()
-	dir, err := fs.Root.CreateDirectory("directory")
+	dir, err := fs.Root.CreateDirectory("directory", 0755)
 	if err != nil {
 		t.Fatal("Couldn't create Directory")
 	}
@@ -77,8 +77,8 @@ func TestCreateDirectory(t *testing.T) {
 
 func TestNewDirectory(t *testing.T) {
 	fs := newTestFS()
-	parent, _ := fs.Root.CreateDirectory("parent")
-	child, _ := parent.CreateDirectory("child")
+	parent, _ := fs.Root.CreateDirectory("parent", 0755)
+	child, _ := parent.CreateDirectory("child", 0755)
 
 	if _, ok := parent.Children[child.Node.Name]; !ok {
 		t.Fatalf("Failed to allocate children")
@@ -88,7 +88,7 @@ func TestNewDirectory(t *testing.T) {
 func TestChildrenMapInitialized(t *testing.T) {
 	fs := newTestFS()
 
-	parent, err := fs.Root.CreateDirectory("parent")
+	parent, err := fs.Root.CreateDirectory("parent", 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,17 +101,17 @@ func TestChildrenMapInitialized(t *testing.T) {
 func TestReaddir(t *testing.T) {
 	fs := newTestFS()
 
-	_, err := fs.Root.CreateFile("hello", content.Memory(nil))
+	_, err := fs.Root.CreateFile("hello", content.Memory(nil), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = fs.Root.CreateFile("readme", content.Memory(nil))
+	_, err = fs.Root.CreateFile("readme", content.Memory(nil), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = fs.Root.CreateDirectory("docs")
+	_, err = fs.Root.CreateDirectory("docs", 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,9 +124,9 @@ func TestReaddir(t *testing.T) {
 	}
 
 	expected := map[string]uint32{
-		"hello":  syscall.S_IFREG,
-		"readme": syscall.S_IFREG,
-		"docs":   syscall.S_IFDIR,
+		"hello":  syscall.S_IFREG | 0644,
+		"readme": syscall.S_IFREG | 0644,
+		"docs":   syscall.S_IFDIR | 0755,
 	}
 
 	count := 0
@@ -161,8 +161,8 @@ func TestReaddir(t *testing.T) {
 
 func TestCreateDuplicateFile(t *testing.T) {
 	fs := newTestFS()
-	_, _ = fs.Root.CreateFile("file1", content.Memory([]byte("Hello")))
-	_, err := fs.Root.CreateFile("file1", content.Memory([]byte("Hello")))
+	_, _ = fs.Root.CreateFile("file1", content.Memory([]byte("Hello")), 0644)
+	_, err := fs.Root.CreateFile("file1", content.Memory([]byte("Hello")), 0644)
 	if err == nil {
 		t.Fatal("Expected error: Duplicate Files")
 	}
@@ -170,8 +170,8 @@ func TestCreateDuplicateFile(t *testing.T) {
 
 func TestCreateDuplicateDirectory(t *testing.T) {
 	fs := newTestFS()
-	_, _ = fs.Root.CreateDirectory("directory")
-	_, err := fs.Root.CreateDirectory("directory")
+	_, _ = fs.Root.CreateDirectory("directory", 0755)
+	_, err := fs.Root.CreateDirectory("directory", 0755)
 	if err == nil {
 		t.Fatal("Expected error: Duplicate Directories")
 	}
@@ -197,7 +197,7 @@ func TestDeleteMissingDir(t *testing.T) {
 
 func TestDeleteDirectoryAsFile(t *testing.T) {
 	fs := newTestFS()
-	_, err := fs.Root.CreateDirectory("file")
+	_, err := fs.Root.CreateDirectory("file", 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestDeleteDirectoryAsFile(t *testing.T) {
 
 func TestDeleteFileAsDirectory(t *testing.T) {
 	fs := newTestFS()
-	_, err := fs.Root.CreateFile("file", content.Memory(nil))
+	_, err := fs.Root.CreateFile("file", content.Memory(nil), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +223,7 @@ func TestDeleteFileAsDirectory(t *testing.T) {
 
 func TestRenameFileSameDirectory(t *testing.T) {
 	fs := newTestFS()
-	file, err := fs.Root.CreateFile("old", content.Memory([]byte("data")))
+	file, err := fs.Root.CreateFile("old", content.Memory([]byte("data")), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +253,7 @@ func TestRenameFileSameDirectory(t *testing.T) {
 
 func TestRenameDirectorySameParent(t *testing.T) {
 	fs := newTestFS()
-	dir, err := fs.Root.CreateDirectory("olddir")
+	dir, err := fs.Root.CreateDirectory("olddir", 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,16 +275,16 @@ func TestRenameDirectorySameParent(t *testing.T) {
 
 func TestRenameMoveToDifferentParent(t *testing.T) {
 	fs := newTestFS()
-	src, err := fs.Root.CreateDirectory("src")
+	src, err := fs.Root.CreateDirectory("src", 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dst, err := fs.Root.CreateDirectory("dst")
+	dst, err := fs.Root.CreateDirectory("dst", 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	file, err := src.CreateFile("file", content.Memory(nil))
+	file, err := src.CreateFile("file", content.Memory(nil), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func TestRenameNonexistentSource(t *testing.T) {
 
 func TestRenameInvalidNewName(t *testing.T) {
 	fs := newTestFS()
-	if _, err := fs.Root.CreateFile("file", content.Memory(nil)); err != nil {
+	if _, err := fs.Root.CreateFile("file", content.Memory(nil), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -331,10 +331,10 @@ func TestRenameInvalidNewName(t *testing.T) {
 
 func TestRenameOverEmptyDirectory(t *testing.T) {
 	fs := newTestFS()
-	if _, err := fs.Root.CreateDirectory("src"); err != nil {
+	if _, err := fs.Root.CreateDirectory("src", 0755); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := fs.Root.CreateDirectory("dst"); err != nil {
+	if _, err := fs.Root.CreateDirectory("dst", 0755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -352,14 +352,14 @@ func TestRenameOverEmptyDirectory(t *testing.T) {
 
 func TestRenameOverNonEmptyDirectory(t *testing.T) {
 	fs := newTestFS()
-	if _, err := fs.Root.CreateDirectory("src"); err != nil {
+	if _, err := fs.Root.CreateDirectory("src", 0755); err != nil {
 		t.Fatal(err)
 	}
-	dst, err := fs.Root.CreateDirectory("dst")
+	dst, err := fs.Root.CreateDirectory("dst", 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := dst.CreateFile("inner", content.Memory(nil)); err != nil {
+	if _, err := dst.CreateFile("inner", content.Memory(nil), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -371,10 +371,10 @@ func TestRenameOverNonEmptyDirectory(t *testing.T) {
 
 func TestRenameDirectoryOverFile(t *testing.T) {
 	fs := newTestFS()
-	if _, err := fs.Root.CreateDirectory("src"); err != nil {
+	if _, err := fs.Root.CreateDirectory("src", 0755); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := fs.Root.CreateFile("dst", content.Memory(nil)); err != nil {
+	if _, err := fs.Root.CreateFile("dst", content.Memory(nil), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -386,11 +386,11 @@ func TestRenameDirectoryOverFile(t *testing.T) {
 
 func TestRenameFileOverFile(t *testing.T) {
 	fs := newTestFS()
-	src, err := fs.Root.CreateFile("src", content.Memory([]byte("source")))
+	src, err := fs.Root.CreateFile("src", content.Memory([]byte("source")), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := fs.Root.CreateFile("dst", content.Memory([]byte("dest"))); err != nil {
+	if _, err := fs.Root.CreateFile("dst", content.Memory([]byte("dest")), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -410,7 +410,7 @@ func TestRenameFileOverFile(t *testing.T) {
 func TestLookupExistingFile(t *testing.T) {
 	fs := newTestFS()
 
-	_, _ = fs.Root.CreateFile("hello", content.Memory(nil))
+	_, _ = fs.Root.CreateFile("hello", content.Memory(nil), 0644)
 
 	var out fuse.EntryOut
 
@@ -423,7 +423,7 @@ func TestLookupExistingFile(t *testing.T) {
 		t.Fatal("expected inode")
 	}
 
-	if out.Attr.Mode != syscall.S_IFREG|0644 {
+	if out.Attr.Mode != syscall.S_IFREG | 0644 {
 		t.Fatalf("unexpected mode %o", out.Attr.Mode)
 	}
 }
@@ -443,7 +443,7 @@ func TestLookupMissing(t *testing.T) {
 func TestDeleteRemovesChild(t *testing.T) {
 	fs := newTestFS()
 
-	_, _ = fs.Root.CreateFile("file", content.Memory(nil))
+	_, _ = fs.Root.CreateFile("file", content.Memory(nil), 0644)
 
 	if err := fs.Root.DeleteFile("file"); err != nil {
 		t.Fatal(err)
@@ -457,7 +457,7 @@ func TestDeleteRemovesChild(t *testing.T) {
 func TestDeleteDirectoryRemovesChild(t *testing.T) {
 	fs := newTestFS()
 
-	_, _ = fs.Root.CreateDirectory("dir")
+	_, _ = fs.Root.CreateDirectory("dir", 0755)
 
 	if err := fs.Root.DeleteDirectory("dir"); err != nil {
 		t.Fatal(err)

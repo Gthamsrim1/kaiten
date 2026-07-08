@@ -29,16 +29,16 @@ func (d *Directory) GetNode() *node.Node {
 	return &d.Node
 }
 
-func (d *Directory) CreateFile(name string, content content.Content) (*File, error) {
-	return d.FS.createFile(name, d, content)
+func (d *Directory) CreateFile(name string, content content.Content, perm uint32) (*File, error) {
+	return d.FS.createFile(name, d, content, perm)
 }
 
 func (d *Directory) DeleteFile(name string) error {
 	return d.FS.deleteFile(name, d)
 }
 
-func (d *Directory) CreateDirectory(name string) (*Directory, error) {
-	return d.FS.createDirectory(name, d)
+func (d *Directory) CreateDirectory(name string, perm uint32) (*Directory, error) {
+	return d.FS.createDirectory(name, d, perm)
 }
 
 func (d *Directory) DeleteDirectory(name string) error {
@@ -55,26 +55,19 @@ func (d *Directory) Mount(ctx context.Context, node node.FSNode) *gofuse.Inode {
 		return inode
 	}
 
-	var (
-		embed gofuse.InodeEmbedder
-		mode  uint32
-	)
+	var embed gofuse.InodeEmbedder
 
-	switch n := node.(type) {
+	switch v := node.(type) {
 	case *File:
-		embed = n
-		mode = syscall.S_IFREG
-
+		embed = v
 	case *Directory:
-		embed = n
-		mode = syscall.S_IFDIR
-
+		embed = v
 	default:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 	}
 
 	inode := d.NewPersistentInode(ctx, embed, gofuse.StableAttr{
-		Mode: mode,
+		Mode: node.GetNode().Mode,
 	})
 
 	d.FS.mounted[id] = inode
@@ -88,7 +81,7 @@ func (d *Directory) Create(ctx context.Context, name string, flags uint32, mode 
 		return nil, nil, 0, errno
 	}
 	
-	file, err := d.CreateFile(name, content.Memory(nil))
+	file, err := d.CreateFile(name, content.Memory(nil), 0644)
 	if err != nil {
 		return nil, nil, 0, errs.ToErrno(err)
 	}
@@ -109,7 +102,7 @@ func (d *Directory) Mkdir(ctx context.Context, name string, mode uint32, out *fu
 		return nil, errno
 	}
 
-	dir, err := d.CreateDirectory(name)
+	dir, err := d.CreateDirectory(name, 0755)
 	if err != nil {
 		return nil, errs.ToErrno(err)
 	}
@@ -171,19 +164,9 @@ func (d *Directory) Readdir(ctx context.Context) (gofuse.DirStream, syscall.Errn
 	entries := make([]fuse.DirEntry, 0, len(d.Children))
 
 	for name, node := range d.Children {
-		mode := uint32(0)
-
-		switch node.(type) {
-		case *Directory:
-			mode = syscall.S_IFDIR
-
-		case *File:
-			mode = syscall.S_IFREG
-		}
-
 		entries = append(entries, fuse.DirEntry{
 			Name: name,
-			Mode: mode,
+			Mode: node.GetNode().Mode,
 			Ino:  node.GetNode().ID,
 		})
 	}
