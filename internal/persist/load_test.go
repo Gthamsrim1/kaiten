@@ -16,7 +16,7 @@ func TestLoad(t *testing.T) {
 	}
 
 	expected := &Snapshot{
-		ID: id,
+		ID:     id,
 		NextID: 42,
 		Nodes: []Node{
 			{

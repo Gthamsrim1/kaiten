@@ -3,11 +3,23 @@ package persist
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+type SnapshotInfo struct {
+	ID       string
+	ParentID *string
+	IsHEAD   bool
+}
+
+type snapshotHeader struct {
+	ID       string  `json:"id"`
+	ParentID *string `json:"parent_id"`
+}
 
 func NewSnapshotID() (string, error) {
 	var id [16]byte
@@ -48,4 +60,54 @@ func Checkout(repo, id string) error {
 		[]byte(id+"\n"),
 		0644,
 	)
+}
+
+func ReadSnapshotInfo(path string) (*SnapshotInfo, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var header snapshotHeader
+	if err := json.Unmarshal(data, &header); err != nil {
+		return nil, err
+	}
+
+	return &SnapshotInfo{
+		ID:       header.ID,
+		ParentID: header.ParentID,
+	}, nil
+}
+
+func ListSnapshots(repo string) ([]SnapshotInfo, error) {
+	head, err := CurrentSnapshotID(repo)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	snapshotDir := filepath.Join(repo, "snapshots")
+
+	entries, err := os.ReadDir(snapshotDir)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshots := make([]SnapshotInfo, 0, len(entries))
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		info, err := ReadSnapshotInfo(filepath.Join(snapshotDir, entry.Name()))
+		if err != nil {
+			return nil, err
+		}
+
+		info.IsHEAD = (info.ID == head)
+
+		snapshots = append(snapshots, *info)
+	}
+
+	return snapshots, nil
 }

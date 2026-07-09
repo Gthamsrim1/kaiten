@@ -18,7 +18,7 @@ func TestSaveCreatesFiles(t *testing.T) {
 	}
 
 	ss := &Snapshot{
-		ID: id,
+		ID:     id,
 		NextID: 2,
 		Nodes: []Node{
 			{
@@ -38,7 +38,7 @@ func TestSaveCreatesFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "snapshots", id + ".json")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "snapshots", id+".json")); err != nil {
 		t.Fatalf("<id>.json not created: %v", err)
 	}
 
@@ -94,7 +94,7 @@ func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 	}
 
 	ss := &Snapshot{
-		ID: id,
+		ID:     id,
 		NextID: 2,
 		Nodes: []Node{
 			{
@@ -114,7 +114,7 @@ func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "snapshots", id + ".json"))
+	data, err := os.ReadFile(filepath.Join(dir, "snapshots", id+".json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,13 +137,13 @@ func TestSaveEmptySnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ss := &Snapshot{ ID: id }
+	ss := &Snapshot{ID: id}
 
 	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "snapshots", id + ".json")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "snapshots", id+".json")); err != nil {
 		t.Fatal(err)
 	}
 

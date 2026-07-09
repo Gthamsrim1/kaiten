@@ -2,9 +2,14 @@ v0.0.1 - Process Runtime
 
 Features:
 
-Re-exec architecture
-UTS namespace
-PID namespace
-Mount namespace
-Root filesystem
-procfs
+✅ FUSE filesystem
+✅ POSIX file operations (create, delete, rename, setattr, etc.)
+✅ Content-defined chunking
+✅ Content-addressed object storage
+✅ Deduplication
+✅ Atomic persistence
+✅ Snapshot
+✅ Restore
+✅ Garbage collection
+✅ Lazy loading
+✅ Unit and integration tests
