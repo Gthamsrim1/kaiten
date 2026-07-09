@@ -10,12 +10,12 @@ import (
 )
 
 type Symlink struct {
-    gofuse.Inode
+	gofuse.Inode
 
-    node.Node
-    FS *KaitenFS
+	node.Node
+	FS *KaitenFS
 
-    Target string
+	Target string
 }
 
 func (s *Symlink) GetNode() *node.Node {
@@ -31,7 +31,7 @@ func (s *Symlink) Getattr(ctx context.Context, f gofuse.FileHandle, out *fuse.At
 }
 
 func (s *Symlink) Readlink(ctx context.Context) ([]byte, syscall.Errno) {
-    return []byte(s.Target), 0
+	return []byte(s.Target), 0
 }
 
 var _ gofuse.NodeReadlinker = (*Symlink)(nil)

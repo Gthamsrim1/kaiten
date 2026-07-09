@@ -38,11 +38,11 @@ func Restore(repo string) (*KaitenFS, error) {
 					loader,
 				),
 			}
-		
+
 		case persist.TypeSymlink:
 			nodes[n.ID] = &Symlink{
-				Node: restoreNode(n),
-				FS: fs,
+				Node:   restoreNode(n),
+				FS:     fs,
 				Target: n.Target,
 			}
 		}

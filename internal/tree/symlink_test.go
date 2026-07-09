@@ -19,7 +19,7 @@ func TestCreateSymlink(t *testing.T) {
 		t.Fatalf("expected target %q, got %q", "/bin/busybox", link.Target)
 	}
 
-	if link.Node.Mode & syscall.S_IFMT != syscall.S_IFLNK {
+	if link.Node.Mode&syscall.S_IFMT != syscall.S_IFLNK {
 		t.Fatalf("expected symlink mode")
 	}
 }

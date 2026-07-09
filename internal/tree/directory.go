@@ -72,7 +72,7 @@ func (d *Directory) Mount(ctx context.Context, node node.FSNode) *gofuse.Inode {
 	case *Directory:
 		embed = v
 	case *Symlink:
-    	embed = v
+		embed = v
 	default:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 	}

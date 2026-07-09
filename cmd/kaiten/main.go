@@ -74,7 +74,7 @@ func main() {
 		if err := persist.GC(*repo); err != nil {
 			log.Fatal(err)
 		}
-	
+
 	case "run":
 		if len(args) < 2 {
 			log.Fatal("usage: kaiten run <command> [args...]")

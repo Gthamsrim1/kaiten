@@ -18,11 +18,11 @@ func Child() error {
 	rootfs := os.Args[2]
 	command := os.Args[3:]
 
-	if err := unix.Mount("", "/", "", unix.MS_REC | unix.MS_PRIVATE, ""); err != nil {
+	if err := unix.Mount("", "/", "", unix.MS_REC|unix.MS_PRIVATE, ""); err != nil {
 		return fmt.Errorf("make mounts private: %w", err)
 	}
 
-	if err := unix.Mount(rootfs, rootfs, "", unix.MS_BIND | unix.MS_REC, ""); err != nil {
+	if err := unix.Mount(rootfs, rootfs, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
 		return fmt.Errorf("bind mount rootfs: %w", err)
 	}
 
@@ -57,14 +57,13 @@ func Child() error {
 	}
 
 	fmt.Printf("Exec: %q\n", command)
-	fmt.Printf("Root entries:\n")
 
-	entries, _ := os.ReadDir("/")
-	for _, e := range entries {
-		fmt.Println(" ", e.Name())
+	path, err := exec.LookPath(command[0])
+	if err != nil {
+		return err
 	}
 
-	return unix.Exec(command[0], command, os.Environ())
+	return unix.Exec(path, command, os.Environ())
 }
 
 func start(rootfs string, cfg Config) error {

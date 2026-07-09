@@ -1,18 +1,18 @@
 package runtime
 
 type Config struct {
-    Repo      string
-    Snapshot  string
+	Repo     string
+	Snapshot string
 
-    Command   []string
+	Command []string
 
-    Hostname  string
+	Hostname string
 
-    WorkDir   string
+	WorkDir string
 
-    Env        []string
+	Env []string
 
-    ReadOnly bool
+	ReadOnly bool
 }
 
 const ChildCommand = "__child__"

@@ -63,7 +63,7 @@ func Import(repo, root string) error {
 			return nil
 		}
 
-		if d.Type() & fs.ModeSymlink != 0 {
+		if d.Type()&fs.ModeSymlink != 0 {
 			target, err := os.Readlink(path)
 			if err != nil {
 				return err

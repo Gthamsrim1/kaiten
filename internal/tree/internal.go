@@ -186,9 +186,9 @@ func (k *KaitenFS) createSymlink(name string, parent *Directory, target string) 
 	}
 
 	symlink := &Symlink{
-		Node:     newNode(k, name, parent, syscall.S_IFLNK, 0777),
-		FS:       k,
-		Target:   target,
+		Node:   newNode(k, name, parent, syscall.S_IFLNK, 0777),
+		FS:     k,
+		Target: target,
 	}
 
 	parent.mu.Lock()
