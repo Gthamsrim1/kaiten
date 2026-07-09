@@ -61,16 +61,8 @@ func main() {
 	server.Wait()
 
 	if fs.IsDirty() {
-		snapshot, err := fs.Snapshot()
-		if err != nil {
-			if createdMountPoint {
-				_ = os.Remove(mountPoint)
-			}
+		if err := persist.Commit(repo, fs); err != nil {
 			log.Fatal(err)
-		}
-
-		if saveErr := persist.Save(repo, snapshot); saveErr != nil {
-			log.Fatal(saveErr)
 		}
 
 		if err := persist.GC(repo); err != nil {

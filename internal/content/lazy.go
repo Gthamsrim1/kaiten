@@ -1,164 +1,76 @@
 package content
 
 import (
-	"fmt"
-	"sync"
-
 	"github.com/Gthamsrim1/kaiten/internal/store"
 )
 
-type ObjectLoader interface {
-    Load(hash [32]byte) ([]byte, error)
-}
-
 type LazyContent struct {
-    mu sync.RWMutex
-
-    loaded bool
-    data []byte
-
-    chunks []store.ChunkRef
-    loader ObjectLoader
+	backing *Backing
 }
 
 func Lazy(chunks []store.ChunkRef, loader ObjectLoader) *LazyContent {
-	return &LazyContent{
+	b := &Backing{
 		chunks: chunks,
 		loader: loader,
 	}
-}
 
-func (l *LazyContent) ensureLoaded() error {
-	l.mu.RLock()
-	if l.loaded {
-		l.mu.RUnlock()
-		return nil
+	b.refs.Store(1)
+
+	return &LazyContent{
+		backing: b,
 	}
-	l.mu.RUnlock()
-
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	if l.loaded {
-		return nil
-	}
-
-	if len(l.chunks) == 0 {
-		l.data = []byte{}
-		l.loaded = true
-		return nil
-	}
-
-	var total uint64
-	for _, c := range l.chunks {
-		total += uint64(c.Length)
-	}
-
-	l.data = make([]byte, 0, int(total))
-
-	for _, c := range l.chunks {
-		object, err := l.loader.Load(c.Hash)
-		if err != nil {
-			return err
-		}
-
-		if uint32(len(object)) != c.Length {
-			return fmt.Errorf(
-				"object %x: expected %d bytes, got %d",
-				c.Hash,
-				c.Length,
-				len(object),
-			)
-		}
-
-		l.data = append(l.data, object...)
-	}
-
-	l.loaded = true
-	return nil
 }
 
 func (l *LazyContent) Read(offset int64, p []byte) (int, error) {
-	if err := l.ensureLoaded(); err != nil {
-		return 0, err
-	}
-
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-
-	if offset >= int64(len(l.data)) {
-		return 0, nil
-	}
-
-	n := copy(p, l.data[offset:])
-	return n, nil
+	return l.backing.Read(offset, p)
 }
 
 func (l *LazyContent) Write(offset int64, p []byte) (int, error) {
-	if err := l.ensureLoaded(); err != nil {
+	if err := l.detach(); err != nil {
 		return 0, err
 	}
 
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	end := int(offset) + len(p)
-	if end > len(l.data) {
-		l.data = append(l.data, make([]byte, end-len(l.data))...)
-	}
-
-	copy(l.data[offset:], p)
-	return len(p), nil
+	return l.backing.Write(offset, p)
 }
 
 func (l *LazyContent) Size() uint64 {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-
-	if l.loaded {
-		return uint64(len(l.data))
-	}
-
-	var size uint64
-	for _, c := range l.chunks {
-		size += uint64(c.Length)
-	}
-
-	return size
+	return l.backing.Size()
 }
 
 func (l *LazyContent) Resize(size uint64) error {
-	if err := l.ensureLoaded(); err != nil {
+	if err := l.detach(); err != nil {
 		return err
 	}
 
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	current := uint64(len(l.data))
-
-	switch {
-	case size < current:
-		l.data = l.data[:size]
-
-	case size > current:
-		newData := make([]byte, size)
-		copy(newData, l.data)
-		l.data = newData
-	}
-
-	return nil
+	return l.backing.Resize(size)
 }
 
 func (l *LazyContent) Bytes() ([]byte, error) {
-	if err := l.ensureLoaded(); err != nil {
-		return nil, err
+	return l.backing.Bytes()
+}
+
+func (l *LazyContent) Backing() *Backing {
+	return l.backing
+}
+
+func (l *LazyContent) detach() error {
+	if l.backing.refs.Load() == 1 {
+		return nil
 	}
 
-	l.mu.RLock()
-	defer l.mu.RUnlock()
+	data, err := l.backing.Bytes()
+	if err != nil {
+		return err
+	}
 
-	out := make([]byte, len(l.data))
-	copy(out, l.data)
-	return out, nil
+	l.backing.Release()
+
+	newBacking := &Backing{
+		loaded: true,
+		data:   data,
+	}
+	newBacking.refs.Store(1)
+
+	l.backing = newBacking
+	return nil
 }

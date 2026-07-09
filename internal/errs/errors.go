@@ -35,6 +35,9 @@ var (
 	ErrObjectCorrupted = errors.New("backing object corrupted")
 	ErrRefUnderflow    = errors.New("refcount underflow")
 
+	//Snapshot
+	ErrSnapshotIDEmpty = errors.New("snapshot id is empty")
+
 	// Runtime
 	ErrInvalidInode     = errors.New("invalid inode")
 	ErrInvalidOperation = errors.New("invalid operation")

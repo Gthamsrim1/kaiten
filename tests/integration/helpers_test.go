@@ -13,12 +13,25 @@ func newFS(t *testing.T) *tree.KaitenFS {
 	return fs
 }
 
-func roundTrip(t *testing.T, fs *tree.KaitenFS) *tree.KaitenFS {
-	repo := t.TempDir()
-	snap, err := fs.Snapshot()
+func snapshotTestFS(t *testing.T, fs *tree.KaitenFS) *persist.Snapshot {
+	t.Helper()
+
+	id, err := persist.NewSnapshotID()
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	snap, err := fs.Snapshot(id, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return snap
+}
+
+func roundTrip(t *testing.T, fs *tree.KaitenFS) *tree.KaitenFS {
+	repo := t.TempDir()
+	snap := snapshotTestFS(t, fs)
 
 	if err := persist.Save(repo, snap); err != nil {
 		t.Fatal(err)
@@ -62,7 +75,7 @@ func compareFile(t *testing.T, expected, actual *tree.File) {
 	if expected.Node.Nlink != actual.Node.Nlink {
 		t.Fatalf("nlink mismatch")
 	}
-	
+
 	data1, err := expected.Content.Bytes()
 	if err != nil {
 		t.Fatal(err)

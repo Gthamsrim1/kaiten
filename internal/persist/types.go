@@ -33,15 +33,15 @@ type Node struct {
 	Ctime time.Time
 }
 
-type Filesystem struct {
-	NextID  uint64
-	Nodes   []Node
-	Objects []Object
-}
+type Snapshot struct {
+	ID string
 
-type Metadata struct {
-	NextID  uint64
-	Nodes   []Node
+	ParentID *string
+
+	NextID uint64
+	Nodes  []Node
+
+	Objects []Object `json:"-"`
 }
 
 type ObjectRef struct {

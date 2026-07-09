@@ -25,12 +25,7 @@ func Mount(repo, mountPoint string, debug bool) (*kfs.KaitenFS, *fuse.Server, bo
 			kaitenFS = kfs.New()
 			kaitenFS.Seed()
 
-			snap, err := kaitenFS.Snapshot()
-			if err != nil {
-				return nil, nil, false, err
-			}
-
-			if err := persist.Save(repo, snap); err != nil {
+			if err := persist.Commit(repo, kaitenFS); err != nil {
 				return nil, nil, false, err
 			}
 		} else {

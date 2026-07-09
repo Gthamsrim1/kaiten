@@ -4,15 +4,29 @@ import (
 	"testing"
 
 	"github.com/Gthamsrim1/kaiten/internal/content"
+	"github.com/Gthamsrim1/kaiten/internal/persist"
 )
+
+func snapshotTestFS(t *testing.T, fs *KaitenFS) *persist.Snapshot {
+	t.Helper()
+
+	id, err := persist.NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	snap, err := fs.Snapshot(id, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return snap
+}
 
 func TestSnapshotEmptyFS(t *testing.T) {
 	fs := newTestFS()
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	snap := snapshotTestFS(t, fs)
 
 	if snap.NextID != fs.CurrentID() {
 		t.Fatalf("expected NextID %d, got %d", fs.CurrentID(), snap.NextID)
@@ -45,10 +59,7 @@ func TestSnapshotNodes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	snap := snapshotTestFS(t, fs)
 
 	if len(snap.Nodes) != 4 {
 		t.Fatalf("expected 4 nodes, got %d", len(snap.Nodes))
@@ -72,10 +83,7 @@ func TestSnapshotParentIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	snap := snapshotTestFS(t, fs)
 
 	parents := make(map[uint64]uint64)
 
@@ -106,10 +114,7 @@ func TestSnapshotObjectHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	snap := snapshotTestFS(t, fs)
 
 	if len(snap.Objects) != 1 {
 		t.Fatalf("expected 1 object, got %d", len(snap.Objects))
@@ -134,10 +139,7 @@ func TestSnapshotObjectData(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	snap := snapshotTestFS(t, fs)
 
 	if string(snap.Objects[0].Data) != "madoka" {
 		t.Fatalf("expected %q, got %q", "madoka", string(snap.Objects[0].Data))
@@ -159,10 +161,7 @@ func TestSnapshotDeduplicatesObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	snap := snapshotTestFS(t, fs)
 
 	if len(snap.Nodes) != 3 {
 		t.Fatalf("expected 3 nodes, got %d", len(snap.Nodes))
@@ -186,10 +185,7 @@ func TestSnapshotDifferentObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	snap := snapshotTestFS(t, fs)
 
 	if len(snap.Objects) != 2 {
 		t.Fatalf("expected 2 objects, got %d", len(snap.Objects))
@@ -206,10 +202,7 @@ func TestSnapshotNodeChunks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	snap := snapshotTestFS(t, fs)
 
 	for _, n := range snap.Nodes {
 		if n.ID != file.ID {
@@ -232,4 +225,38 @@ func TestSnapshotNodeChunks(t *testing.T) {
 	}
 
 	t.Fatal("file node not found")
+}
+
+func TestSnapshotID(t *testing.T) {
+	fs := newTestFS()
+
+	snap := snapshotTestFS(t, fs)
+
+	if snap.ID == "" {
+		t.Fatal("expected snapshot ID")
+	}
+}
+
+func TestSnapshotParentID(t *testing.T) {
+	fs := newTestFS()
+
+	id, err := persist.NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parent := "parent-snapshot"
+
+	snap, err := fs.Snapshot(id, &parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if snap.ParentID == nil {
+		t.Fatal("expected parent")
+	}
+
+	if *snap.ParentID != parent {
+		t.Fatalf("expected %q, got %q", parent, *snap.ParentID)
+	}
 }

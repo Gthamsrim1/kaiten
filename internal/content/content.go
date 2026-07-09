@@ -7,4 +7,5 @@ type Content interface {
 	Resize(size uint64) error
 
 	Bytes() ([]byte, error)
+	Backing() *Backing
 }

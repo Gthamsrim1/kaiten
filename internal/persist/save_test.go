@@ -12,8 +12,13 @@ func TestSaveCreatesFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	name := testHash("Kaiten")
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	fs := &Filesystem{
+	ss := &Snapshot{
+		ID: id,
 		NextID: 2,
 		Nodes: []Node{
 			{
@@ -29,12 +34,12 @@ func TestSaveCreatesFiles(t *testing.T) {
 		},
 	}
 
-	if err := Save(dir, fs); err != nil {
+	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "metadata.json")); err != nil {
-		t.Fatalf("metadata.json not created: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, "snapshots", id + ".json")); err != nil {
+		t.Fatalf("<id>.json not created: %v", err)
 	}
 
 	if _, err := os.Stat(filepath.Join(dir, "objects")); err != nil {
@@ -51,7 +56,13 @@ func TestSaveWritesObjectData(t *testing.T) {
 
 	name := testHash("Kaiten")
 
-	fs := &Filesystem{
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss := &Snapshot{
+		ID: id,
 		Objects: []Object{
 			{
 				ID:   name,
@@ -60,7 +71,7 @@ func TestSaveWritesObjectData(t *testing.T) {
 		},
 	}
 
-	if err := Save(dir, fs); err != nil {
+	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 
@@ -77,7 +88,13 @@ func TestSaveWritesObjectData(t *testing.T) {
 func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 	dir := t.TempDir()
 
-	fs := &Filesystem{
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss := &Snapshot{
+		ID: id,
 		NextID: 2,
 		Nodes: []Node{
 			{
@@ -93,11 +110,11 @@ func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 		},
 	}
 
-	if err := Save(dir, fs); err != nil {
+	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "metadata.json"))
+	data, err := os.ReadFile(filepath.Join(dir, "snapshots", id + ".json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,20 +125,25 @@ func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 	}
 
 	if _, ok := raw["objects"]; ok {
-		t.Fatal("metadata.json should not contain an objects field")
+		t.Fatal("<id>.json should not contain an objects field")
 	}
 }
 
-func TestSaveEmptyFilesystem(t *testing.T) {
+func TestSaveEmptySnapshot(t *testing.T) {
 	dir := t.TempDir()
 
-	fs := &Filesystem{}
-
-	if err := Save(dir, fs); err != nil {
+	id, err := NewSnapshotID()
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "metadata.json")); err != nil {
+	ss := &Snapshot{ ID: id }
+
+	if err := Save(dir, ss); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "snapshots", id + ".json")); err != nil {
 		t.Fatal(err)
 	}
 

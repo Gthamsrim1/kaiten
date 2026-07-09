@@ -9,17 +9,17 @@ import (
 )
 
 func Restore(repo string) (*KaitenFS, error) {
-	pfs, loader, err := persist.Load(repo)
+	pss, loader, err := persist.Load(repo)
 	if err != nil {
 		return nil, err
 	}
 
 	fs := New()
-	fs.ID.Store(pfs.NextID)
+	fs.ID.Store(pss.NextID)
 
-	nodes := make(map[uint64]node.FSNode, len(pfs.Nodes))
+	nodes := make(map[uint64]node.FSNode, len(pss.Nodes))
 
-	for _, n := range pfs.Nodes {
+	for _, n := range pss.Nodes {
 
 		switch n.Type {
 		case persist.TypeDirectory:
@@ -41,7 +41,7 @@ func Restore(repo string) (*KaitenFS, error) {
 		}
 	}
 
-	for _, n := range pfs.Nodes {
+	for _, n := range pss.Nodes {
 		current := nodes[n.ID]
 
 		if n.ParentID == 0 {

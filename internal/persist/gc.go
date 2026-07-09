@@ -7,22 +7,35 @@ import (
 )
 
 func GC(repo string) error {
-	fs, _, err := Load(repo)
+	snapshotDir := filepath.Join(repo, "snapshots")
+
+	entries, err := os.ReadDir(snapshotDir)
 	if err != nil {
 		return err
 	}
 
 	live := map[[32]byte]struct{}{}
 
-	for _, node := range fs.Nodes {
-		for _, chunk := range node.Chunks {
-			live[chunk.Hash] = struct{}{}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		snap, _, err := LoadSnapshot(filepath.Join(snapshotDir, entry.Name()))
+		if err != nil {
+			return err
+		}
+
+		for _, node := range snap.Nodes {
+			for _, chunk := range node.Chunks {
+				live[chunk.Hash] = struct{}{}
+			}
 		}
 	}
 
 	objectDir := filepath.Join(repo, "objects")
 
-	entries, err := os.ReadDir(objectDir)
+	entries, err = os.ReadDir(objectDir)
 	if err != nil {
 		return err
 	}

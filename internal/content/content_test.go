@@ -10,7 +10,7 @@ func TestMemoryRead(t *testing.T) {
 
 	buf := make([]byte, 5)
 
-	n, err := m.Read(0, buf)
+	n, err := m.backing.Read(0, buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestMemoryRead(t *testing.T) {
 func TestMemoryWrite(t *testing.T) {
 	m := Memory(nil)
 
-	n, err := m.Write(0, []byte("hello"))
+	n, err := m.backing.Write(0, []byte("hello"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,36 +36,36 @@ func TestMemoryWrite(t *testing.T) {
 		t.Fatalf("expected to write 5 bytes, got %d", n)
 	}
 
-	if !bytes.Equal(m.data, []byte("hello")) {
-		t.Fatalf("expected %q, got %q", "hello", string(m.data))
+	if !bytes.Equal(m.backing.data, []byte("hello")) {
+		t.Fatalf("expected %q, got %q", "hello", string(m.backing.data))
 	}
 }
 
 func TestMemoryOverwrite(t *testing.T) {
 	m := Memory([]byte("hello"))
 
-	_, err := m.Write(0, []byte("HELLO"))
+	_, err := m.backing.Write(0, []byte("HELLO"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !bytes.Equal(m.data, []byte("HELLO")) {
-		t.Fatalf("expected %q, got %q", "HELLO", string(m.data))
+	if !bytes.Equal(m.backing.data, []byte("HELLO")) {
+		t.Fatalf("expected %q, got %q", "HELLO", string(m.backing.data))
 	}
 }
 
 func TestMemoryAppend(t *testing.T) {
 	m := Memory([]byte("hello"))
 
-	_, err := m.Write(5, []byte(" world"))
+	_, err := m.backing.Write(5, []byte(" world"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	expected := []byte("hello world")
 
-	if !bytes.Equal(m.data, expected) {
-		t.Fatalf("expected %q, got %q", expected, m.data)
+	if !bytes.Equal(m.backing.data, expected) {
+		t.Fatalf("expected %q, got %q", expected, m.backing.data)
 	}
 }
 
@@ -76,7 +76,7 @@ func TestMemoryCopiesInput(t *testing.T) {
 
 	data[0] = 'H'
 
-	if bytes.Equal(m.data, data) {
+	if bytes.Equal(m.backing.data, data) {
 		t.Fatal("Memory should copy the input slice")
 	}
 }
@@ -86,7 +86,7 @@ func TestMemoryReadEmpty(t *testing.T) {
 
 	buf := make([]byte, 10)
 
-	n, err := m.Read(0, buf)
+	n, err := m.backing.Read(0, buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestMemoryReadPastEOF(t *testing.T) {
 
 	buf := make([]byte, 10)
 
-	n, err := m.Read(100, buf)
+	n, err := m.backing.Read(100, buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestMemoryReadPastEOF(t *testing.T) {
 func TestMemoryWritePastEnd(t *testing.T) {
 	m := Memory([]byte("hello"))
 
-	_, err := m.Write(10, []byte("abc"))
+	_, err := m.backing.Write(10, []byte("abc"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,21 +125,21 @@ func TestMemoryWritePastEnd(t *testing.T) {
 		'a', 'b', 'c',
 	}
 
-	if !bytes.Equal(m.data, expected) {
-		t.Fatalf("unexpected data: %v", m.data)
+	if !bytes.Equal(m.backing.data, expected) {
+		t.Fatalf("unexpected data: %v", m.backing.data)
 	}
 }
 
 func TestMemorySize(t *testing.T) {
 	m := Memory([]byte("hello"))
 
-	if m.Size() != 5 {
-		t.Fatalf("expected size 5, got %d", m.Size())
+	if m.backing.Size() != 5 {
+		t.Fatalf("expected size 5, got %d", m.backing.Size())
 	}
 
-	_, _ = m.Write(5, []byte(" world"))
+	_, _ = m.backing.Write(5, []byte(" world"))
 
-	if m.Size() != 11 {
-		t.Fatalf("expected size 11, got %d", m.Size())
+	if m.backing.Size() != 11 {
+		t.Fatalf("expected size 11, got %d", m.backing.Size())
 	}
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/Gthamsrim1/kaiten/internal/store"
 )
 
-func (fs *KaitenFS) snapshotNode(n node.FSNode, parentID uint64, snap *persist.Filesystem, objects map[[32]byte]struct{}) error {
+func (fs *KaitenFS) snapshotNode(n node.FSNode, parentID uint64, snap *persist.Snapshot, objects map[[32]byte]struct{}) error {
 	meta := n.GetNode()
 
 	record := persist.Node{
@@ -85,9 +85,11 @@ func (fs *KaitenFS) snapshotNode(n node.FSNode, parentID uint64, snap *persist.F
 	return nil
 }
 
-func (fs *KaitenFS) Snapshot() (*persist.Filesystem, error) {
-	snap := &persist.Filesystem{
-		NextID: fs.CurrentID(),
+func (fs *KaitenFS) Snapshot(ID string, parentID *string) (*persist.Snapshot, error) {
+	snap := &persist.Snapshot{
+		ID:       ID,
+		ParentID: parentID,
+		NextID:   fs.CurrentID(),
 	}
 
 	objects := make(map[[32]byte]struct{})

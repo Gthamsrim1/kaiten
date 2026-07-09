@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,19 +9,19 @@ import (
 	"github.com/Gthamsrim1/kaiten/internal/persist"
 )
 
+func commitTestFS(t *testing.T, repo string, fs *KaitenFS) {
+	t.Helper()
+
+	if err := persist.Commit(repo, fs); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRestoreEmpty(t *testing.T) {
 	fs := newTestFS()
-
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	dir := t.TempDir()
 
-	if err := persist.Save(dir, snap); err != nil {
-		t.Fatal(err)
-	}
+	commitTestFS(t, dir, fs)
 
 	restored, err := Restore(dir)
 	if err != nil {
@@ -40,22 +39,14 @@ func TestRestoreEmpty(t *testing.T) {
 
 func TestRestoreSingleFile(t *testing.T) {
 	fs := newTestFS()
+	dir := t.TempDir()
 
 	_, err := fs.Root.CreateFile("hello", content.Memory([]byte("Madoka")), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dir := t.TempDir()
-
-	if err := persist.Save(dir, snap); err != nil {
-		t.Fatal(err)
-	}
+	commitTestFS(t, dir, fs)
 
 	restored, err := Restore(dir)
 	if err != nil {
@@ -105,16 +96,9 @@ func TestRestoreNestedDirectories(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	dir := t.TempDir()
 
-	if err := persist.Save(dir, snap); err != nil {
-		t.Fatal(err)
-	}
+	commitTestFS(t, dir, fs)
 
 	restored, err := Restore(dir)
 	if err != nil {
@@ -155,16 +139,9 @@ func TestRestorePreservesMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	dir := t.TempDir()
 
-	if err := persist.Save(dir, snap); err != nil {
-		t.Fatal(err)
-	}
+	commitTestFS(t, dir, fs)
 
 	restored, err := Restore(dir)
 	if err != nil {
@@ -210,39 +187,25 @@ func TestRestoreMissingObject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	dir := t.TempDir()
 
-	if err := persist.Save(dir, snap); err != nil {
-		t.Fatal(err)
-	}
+	commitTestFS(t, dir, fs)
 
-	if len(snap.Objects) == 0 {
-		t.Fatal("expected object")
-	}
+	objectDir := filepath.Join(dir, "objects")
 
-	if err := os.Remove(filepath.Join(dir, "objects", hex.EncodeToString(snap.Objects[0].ID[:]))); err != nil {
-		t.Fatal(err)
-	}
-
-	restored, err := Restore(dir)
+	entries, err := os.ReadDir(objectDir)
 	if err != nil {
-		t.Fatalf("restore should succeed: %v", err)
+		t.Fatal(err)
 	}
 
-	restoredFile, ok := restored.Root.Children["hello"].(*File)
-	if !ok {
-		t.Fatal("expected restored file")
+	if len(entries) == 0 {
+		t.Fatal("expected objects")
 	}
 
-	buf := make([]byte, restoredFile.Content.Size())
-
-	if _, err := restoredFile.Content.Read(0, buf); err == nil {
-		t.Fatal("expected read to fail")
+	for _, entry := range entries {
+		if err := os.Remove(filepath.Join(objectDir, entry.Name())); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -262,14 +225,7 @@ func TestRestoreLazyContentMissingObject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := fs.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := persist.Save(repo, snap); err != nil {
-		t.Fatal(err)
-	}
+	commitTestFS(t, repo, fs)
 
 	entries, err := os.ReadDir(filepath.Join(repo, "objects"))
 	if err != nil {

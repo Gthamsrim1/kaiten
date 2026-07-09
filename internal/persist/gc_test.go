@@ -20,7 +20,13 @@ func TestGCRemovesUnreferencedObject(t *testing.T) {
 	hash1 := testHash("object1")
 	hash2 := testHash("object2")
 
-	fs := &Filesystem{
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss := &Snapshot{
+		ID: id,
 		Nodes: []Node{
 			{
 				ID:   1,
@@ -29,7 +35,7 @@ func TestGCRemovesUnreferencedObject(t *testing.T) {
 				Chunks: []store.ChunkRef{
 					{
 						Hash:   hash1,
-						Length: uint32(6),
+						Length: 6,
 					},
 				},
 			},
@@ -46,7 +52,7 @@ func TestGCRemovesUnreferencedObject(t *testing.T) {
 		},
 	}
 
-	if err := Save(dir, fs); err != nil {
+	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 
@@ -68,7 +74,13 @@ func TestGCKeepsReferencedObject(t *testing.T) {
 
 	hash := testHash("object")
 
-	fs := &Filesystem{
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss := &Snapshot{
+		ID: id,
 		Nodes: []Node{
 			{
 				ID:   1,
@@ -90,7 +102,7 @@ func TestGCKeepsReferencedObject(t *testing.T) {
 		},
 	}
 
-	if err := Save(dir, fs); err != nil {
+	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 
@@ -106,9 +118,16 @@ func TestGCKeepsReferencedObject(t *testing.T) {
 func TestGCEmptyRepository(t *testing.T) {
 	dir := t.TempDir()
 
-	fs := &Filesystem{}
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if err := Save(dir, fs); err != nil {
+	ss := &Snapshot{
+		ID: id,
+	}
+
+	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 
@@ -131,7 +150,13 @@ func TestGCMultipleReferences(t *testing.T) {
 
 	hash := testHash("shared")
 
-	fs := &Filesystem{
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss := &Snapshot{
+		ID: id,
 		Nodes: []Node{
 			{
 				ID:   1,
@@ -164,7 +189,7 @@ func TestGCMultipleReferences(t *testing.T) {
 		},
 	}
 
-	if err := Save(dir, fs); err != nil {
+	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 
@@ -185,7 +210,13 @@ func TestGCDeletesManyObjects(t *testing.T) {
 	hashC := testHash("C")
 	hashD := testHash("D")
 
-	fs := &Filesystem{
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss := &Snapshot{
+		ID: id,
 		Nodes: []Node{
 			{
 				ID:   1,
@@ -218,7 +249,7 @@ func TestGCDeletesManyObjects(t *testing.T) {
 		},
 	}
 
-	if err := Save(dir, fs); err != nil {
+	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 
@@ -248,7 +279,13 @@ func TestGCIgnoresSubdirectories(t *testing.T) {
 
 	hash := testHash("abc")
 
-	fs := &Filesystem{
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss := &Snapshot{
+		ID: id,
 		Nodes: []Node{
 			{
 				ID:   1,
@@ -270,7 +307,7 @@ func TestGCIgnoresSubdirectories(t *testing.T) {
 		},
 	}
 
-	if err := Save(dir, fs); err != nil {
+	if err := Save(dir, ss); err != nil {
 		t.Fatal(err)
 	}
 

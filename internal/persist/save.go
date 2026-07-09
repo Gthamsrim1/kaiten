@@ -3,12 +3,33 @@ package persist
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/Gthamsrim1/kaiten/internal/errs"
 )
 
-func Save(path string, snapshot *Filesystem) error {
+func Save(path string, snapshot *Snapshot) error {
 	if err := os.MkdirAll(path, 0755); err != nil {
+		return err
+	}
+
+	snapshotDir := filepath.Join(path, "snapshots")
+
+	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
+		return err
+	}
+
+	if snapshot.ID == "" {
+		return errs.ErrSnapshotIDEmpty
+	}
+
+	snapshotPath := filepath.Join(snapshotDir, snapshot.ID+".json")
+
+	if _, err := os.Stat(snapshotPath); err == nil {
+		return fmt.Errorf("snapshot %q already exists", snapshot.ID)
+	} else if !os.IsNotExist(err) {
 		return err
 	}
 
@@ -17,17 +38,12 @@ func Save(path string, snapshot *Filesystem) error {
 		return err
 	}
 
-	meta := Metadata{
-		NextID:  snapshot.NextID,
-		Nodes:   snapshot.Nodes,
-	}
-
-	data, err := json.MarshalIndent(meta, "", "  ")
+	data, err := json.MarshalIndent(snapshot, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	if err := writeAtomic(filepath.Join(path, "metadata.json"), data, 0644); err != nil {
+	if err := writeAtomic(snapshotPath, data, 0644); err != nil {
 		return err
 	}
 
@@ -43,6 +59,10 @@ func Save(path string, snapshot *Filesystem) error {
 		if err := writeAtomic(objectPath, object.Data, 0644); err != nil {
 			return err
 		}
+	}
+
+	if err := writeAtomic(filepath.Join(path, "HEAD"), []byte(snapshot.ID+"\n"), 0644); err != nil {
+		return err
 	}
 
 	return nil

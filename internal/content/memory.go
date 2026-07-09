@@ -1,72 +1,72 @@
 package content
 
-import "sync"
-
 type MemoryContent struct {
-	mu   sync.RWMutex
-	data []byte
+	backing *Backing
 }
 
 func Memory(data []byte) *MemoryContent {
+	b := &Backing{
+		loaded: true,
+		data:   append([]byte(nil), data...),
+	}
+
+	b.refs.Store(1)
+
 	return &MemoryContent{
-		data: append([]byte(nil), data...),
+		backing: b,
 	}
 }
 
 func (m *MemoryContent) Read(offset int64, p []byte) (int, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	if offset >= int64(len(m.data)) {
-		return 0, nil
-	}
-
-	n := copy(p, m.data[offset:])
-	return n, nil
+	return m.backing.Read(offset, p)
 }
 
 func (m *MemoryContent) Write(offset int64, p []byte) (int, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	end := int(offset) + len(p)
-	if end > len(m.data) {
-		m.data = append(m.data, make([]byte, end-len(m.data))...)
+	if err := m.detach(); err != nil {
+		return 0, err
 	}
 
-	copy(m.data[offset:], p)
-	return len(p), nil
+	return m.backing.Write(offset, p)
 }
 
 func (m *MemoryContent) Size() uint64 {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return uint64(len(m.data))
+	return m.backing.Size()
 }
 
 func (m *MemoryContent) Resize(size uint64) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	current := uint64(len(m.data))
-
-	switch {
-	case size < current:
-		m.data = m.data[:size]
-
-	case size > current:
-		newData := make([]byte, size)
-		copy(newData, m.data)
-		m.data = newData
+	if err := m.detach(); err != nil {
+		return err
 	}
 
-	return nil
+	return m.backing.Resize(size)
 }
 
 func (m *MemoryContent) Bytes() ([]byte, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	out := make([]byte, len(m.data))
-	copy(out, m.data)
-	return out, nil
+	return m.backing.Bytes()
+}
+
+func (m *MemoryContent) Backing() *Backing {
+	return m.backing
+}
+
+func (m *MemoryContent) detach() error {
+	if m.backing.refs.Load() == 1 {
+		return nil
+	}
+
+	data, err := m.backing.Bytes()
+	if err != nil {
+		return err
+	}
+
+	m.backing.Release()
+
+	newBacking := &Backing{
+		loaded: true,
+		data:   data,
+	}
+	newBacking.refs.Store(1)
+
+	m.backing = newBacking
+	return nil
 }

@@ -10,7 +10,13 @@ import (
 func TestLoad(t *testing.T) {
 	dir := t.TempDir()
 
-	expected := &Filesystem{
+	id, err := NewSnapshotID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Snapshot{
+		ID: id,
 		NextID: 42,
 		Nodes: []Node{
 			{
@@ -66,18 +72,25 @@ func TestLoadMissingMetadata(t *testing.T) {
 	}
 }
 
-func TestLoadInvalidMetadata(t *testing.T) {
+func TestLoadInvalidSnapshot(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := Save(dir, &Filesystem{}); err != nil {
+	id, err := NewSnapshotID()
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := os.WriteFile(filepath.Join(dir, "metadata.json"), []byte("{"), 0644); err != nil {
+	if err := Save(dir, &Snapshot{ID: id}); err != nil {
 		t.Fatal(err)
 	}
 
-	_, _, err := Load(dir)
+	snapshotPath := filepath.Join(dir, "snapshots", id+".json")
+
+	if err := os.WriteFile(snapshotPath, []byte("{"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, err = Load(dir)
 	if err == nil {
 		t.Fatal("expected json error")
 	}

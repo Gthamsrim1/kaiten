@@ -4,27 +4,33 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-func Load(path string) (*Filesystem, *Repository, error) {
-	data, err := os.ReadFile(filepath.Join(path, "metadata.json"))
+func Load(path string) (*Snapshot, *Repository, error) {
+	head, err := os.ReadFile(filepath.Join(path, "HEAD"))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var meta Metadata
-	if err := json.Unmarshal(data, &meta); err != nil {
+	snapshotPath := filepath.Join(path, "snapshots", strings.TrimSpace(string(head))+".json")
+	return LoadSnapshot(snapshotPath)
+}
+
+func LoadSnapshot(snapshotPath string) (*Snapshot, *Repository, error) {
+	data, err := os.ReadFile(snapshotPath)
+	if err != nil {
 		return nil, nil, err
 	}
 
-	fs := &Filesystem{
-		NextID:  meta.NextID,
-		Nodes:   meta.Nodes,
+	var snap Snapshot
+	if err := json.Unmarshal(data, &snap); err != nil {
+		return nil, nil, err
 	}
 
 	repo := &Repository{
-        Path: path,
-    }
+		Path: filepath.Dir(filepath.Dir(snapshotPath)),
+	}
 
-	return fs, repo, nil
+	return &snap, repo, nil
 }
