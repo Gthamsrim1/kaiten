@@ -6,5 +6,5 @@ type Content interface {
 	Size() uint64
 	Resize(size uint64) error
 
-	Bytes() []byte
+	Bytes() ([]byte, error)
 }

@@ -7,7 +7,7 @@ import (
 )
 
 func GC(repo string) error {
-	fs, err := Load(repo)
+	fs, _, err := Load(repo)
 	if err != nil {
 		return err
 	}

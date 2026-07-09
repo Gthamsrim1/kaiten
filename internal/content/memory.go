@@ -63,12 +63,10 @@ func (m *MemoryContent) Resize(size uint64) error {
 	return nil
 }
 
-// Bytes returns a copy of the underlying data. Intended for tests/debugging —
-// prefer Read/Size for normal I/O.
-func (m *MemoryContent) Bytes() []byte {
+func (m *MemoryContent) Bytes() ([]byte, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	out := make([]byte, len(m.data))
 	copy(out, m.data)
-	return out
+	return out, nil
 }

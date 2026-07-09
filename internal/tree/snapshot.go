@@ -48,7 +48,10 @@ func (fs *KaitenFS) snapshotNode(n node.FSNode, parentID uint64, snap *persist.F
 
 	case *File:
 		record.Type = persist.TypeFile
-		data := v.Content.Bytes()
+		data, err := v.Content.Bytes()
+		if err != nil {
+			return err
+		}
 
 		chunks, err := chunk.Split(data, chunk.Default)
 		if err != nil {

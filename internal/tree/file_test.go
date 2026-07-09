@@ -66,9 +66,13 @@ func TestFileWrite(t *testing.T) {
 	}
 
 	mem := file.Content.(*content.MemoryContent)
+	data, err := mem.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if string(mem.Bytes()) != "Madoka" {
-		t.Fatalf("expected %q, got %q", "Madoka", string(mem.Bytes()))
+	if string(data) != "Madoka" {
+		t.Fatalf("expected %q, got %q", "Madoka", string(data))
 	}
 }
 
@@ -83,9 +87,13 @@ func TestFileOverwrite(t *testing.T) {
 	}
 
 	mem := file.Content.(*content.MemoryContent)
+	data, err := mem.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if string(mem.Bytes()) != "Momura" {
-		t.Fatalf("expected %q, got %q", "Momura", string(mem.Bytes()))
+	if string(data) != "Momura" {
+		t.Fatalf("expected %q, got %q", "Momura", string(data))
 	}
 }
 
@@ -100,9 +108,13 @@ func TestFileAppend(t *testing.T) {
 	}
 
 	mem := file.Content.(*content.MemoryContent)
+	data, err := mem.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if string(mem.Bytes()) != "Kyoko Sakura" {
-		t.Fatalf("expected %q, got %q", "Kyoko Sakura", string(mem.Bytes()))
+	if string(data) != "Kyoko Sakura" {
+		t.Fatalf("expected %q, got %q", "Kyoko Sakura", string(data))
 	}
 }
 
@@ -208,9 +220,13 @@ func TestFileTruncateSmaller(t *testing.T) {
 	}
 
 	mem := file.Content.(*content.MemoryContent)
+	data, err := mem.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if string(mem.Bytes()) != "Hello" {
-		t.Fatalf("expected %q, got %q", "Hello", string(mem.Bytes()))
+	if string(data) != "Hello" {
+		t.Fatalf("expected %q, got %q", "Hello", string(data))
 	}
 
 	if out.Size != 5 {
@@ -235,12 +251,16 @@ func TestFileExtend(t *testing.T) {
 	}
 
 	mem := file.Content.(*content.MemoryContent)
-
-	if len(mem.Bytes()) != 10 {
-		t.Fatalf("expected len 10, got %d", len(mem.Bytes()))
+	data, err := mem.Bytes()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if string(mem.Bytes()[:5]) != "Hello" {
+	if len(data) != 10 {
+		t.Fatalf("expected len 10, got %d", len(data))
+	}
+
+	if string(data[:5]) != "Hello" {
 		t.Fatal("existing contents corrupted")
 	}
 
@@ -260,9 +280,13 @@ func TestFileWriteMiddle(t *testing.T) {
 	}
 
 	mem := file.Content.(*content.MemoryContent)
+	data, err := mem.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if string(mem.Bytes()) != "abcXYZ" {
-		t.Fatalf("expected %q, got %q", "abcXYZ", string(mem.Bytes()))
+	if string(data) != "abcXYZ" {
+		t.Fatalf("expected %q, got %q", "abcXYZ", string(data))
 	}
 }
 

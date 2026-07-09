@@ -76,7 +76,6 @@ func TestSaveWritesObjectData(t *testing.T) {
 
 func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 	dir := t.TempDir()
-	name := testHash("Kaiten")
 
 	fs := &Filesystem{
 		NextID: 2,
@@ -88,7 +87,7 @@ func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 		},
 		Objects: []Object{
 			{
-				ID:   name,
+				ID:   testHash("Kaiten"),
 				Data: []byte("Madoka"),
 			},
 		},
@@ -103,17 +102,13 @@ func TestSaveMetadataDoesNotContainObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var meta Filesystem
-	if err := json.Unmarshal(data, &meta); err != nil {
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(meta.Objects) != 1 {
-		t.Fatalf("expected 1 object reference, got %d", len(meta.Objects))
-	}
-
-	if meta.Objects[0].ID != name {
-		t.Fatalf("unexpected object id %q", meta.Objects[0].ID)
+	if _, ok := raw["objects"]; ok {
+		t.Fatal("metadata.json should not contain an objects field")
 	}
 }
 

@@ -72,10 +72,14 @@ func TestRestoreSingleFile(t *testing.T) {
 		t.Fatal("restored node is not a file")
 	}
 
-	mem := file.Content.(*content.MemoryContent)
+	mem := file.Content
+	data, err := mem.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if string(mem.Bytes()) != "Madoka" {
-		t.Fatalf("expected %q, got %q", "Madoka", string(mem.Bytes()))
+	if string(data) != "Madoka" {
+		t.Fatalf("expected %q, got %q", "Madoka", string(data))
 	}
 
 	if file.Node.Parent != restored.Root {
@@ -133,7 +137,12 @@ func TestRestoreNestedDirectories(t *testing.T) {
 		t.Fatal("ls parent incorrect")
 	}
 
-	if string(lsNode.Content.(*content.MemoryContent).Bytes()) != "binary" {
+	data, err := lsNode.Content.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(data) != "binary" {
 		t.Fatal("file contents not restored")
 	}
 }
@@ -220,7 +229,70 @@ func TestRestoreMissingObject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Restore(dir); err == nil {
-		t.Fatal("expected restore to fail")
+	restored, err := Restore(dir)
+	if err != nil {
+		t.Fatalf("restore should succeed: %v", err)
+	}
+
+	restoredFile, ok := restored.Root.Children["hello"].(*File)
+	if !ok {
+		t.Fatal("expected restored file")
+	}
+
+	buf := make([]byte, restoredFile.Content.Size())
+
+	if _, err := restoredFile.Content.Read(0, buf); err == nil {
+		t.Fatal("expected read to fail")
+	}
+}
+
+func TestRestoreLazyContentMissingObject(t *testing.T) {
+	repo := t.TempDir()
+
+	fs := newTestFS()
+
+	root := fs.Root
+
+	file, err := root.CreateFile("hello", content.Memory(nil), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := file.Content.Write(0, []byte("Hello Kaiten!")); err != nil {
+		t.Fatal(err)
+	}
+
+	snap, err := fs.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := persist.Save(repo, snap); err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(repo, "objects"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, e := range entries {
+		if err := os.Remove(filepath.Join(repo, "objects", e.Name())); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	restored, err := Restore(repo)
+	if err != nil {
+		t.Fatalf("restore failed: %v", err)
+	}
+
+	f := restored.Root.Children["hello"].(*File)
+
+	buf := make([]byte, f.Content.Size())
+
+	_, err = f.Content.Read(0, buf)
+	if err == nil {
+		t.Fatal("expected read to fail")
 	}
 }

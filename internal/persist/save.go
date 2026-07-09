@@ -20,11 +20,6 @@ func Save(path string, snapshot *Filesystem) error {
 	meta := Metadata{
 		NextID:  snapshot.NextID,
 		Nodes:   snapshot.Nodes,
-		Objects: make([]ObjectRef, len(snapshot.Objects)),
-	}
-
-	for i, obj := range snapshot.Objects {
-		meta.Objects[i] = ObjectRef{ID: obj.ID}
 	}
 
 	data, err := json.MarshalIndent(meta, "", "  ")

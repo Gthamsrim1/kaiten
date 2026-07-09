@@ -42,7 +42,6 @@ type Filesystem struct {
 type Metadata struct {
 	NextID  uint64
 	Nodes   []Node
-	Objects []ObjectRef `json:"objects"`
 }
 
 type ObjectRef struct {

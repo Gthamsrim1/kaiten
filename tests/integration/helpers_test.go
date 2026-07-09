@@ -62,8 +62,18 @@ func compareFile(t *testing.T, expected, actual *tree.File) {
 	if expected.Node.Nlink != actual.Node.Nlink {
 		t.Fatalf("nlink mismatch")
 	}
+	
+	data1, err := expected.Content.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if string(expected.Content.Bytes()) != string(actual.Content.Bytes()) {
+	data2, err := actual.Content.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(data1) != string(data2) {
 		t.Fatalf("content mismatch")
 	}
 }
