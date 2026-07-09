@@ -49,6 +49,11 @@ func (d *Directory) DeleteDirectory(name string) error {
 	return d.FS.deleteDirectory(name, d)
 }
 
+func (d *Directory) CreateSymlink(name, target string) (*Symlink, error) {
+	d.FS.MarkDirty()
+	return d.FS.createSymlink(name, d, target)
+}
+
 func (d *Directory) Mount(ctx context.Context, node node.FSNode) *gofuse.Inode {
 	id := node.GetNode().ID
 
@@ -66,6 +71,8 @@ func (d *Directory) Mount(ctx context.Context, node node.FSNode) *gofuse.Inode {
 		embed = v
 	case *Directory:
 		embed = v
+	case *Symlink:
+    	embed = v
 	default:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 	}

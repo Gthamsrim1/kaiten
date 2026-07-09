@@ -180,6 +180,24 @@ func (k *KaitenFS) createDirectory(name string, parent *Directory, perm uint32) 
 	return directory, nil
 }
 
+func (k *KaitenFS) createSymlink(name string, parent *Directory, target string) (*Symlink, error) {
+	if err := k.validateNewChild(name, parent); err != nil {
+		return nil, err
+	}
+
+	symlink := &Symlink{
+		Node:     newNode(k, name, parent, syscall.S_IFLNK, 0777),
+		FS:       k,
+		Target:   target,
+	}
+
+	parent.mu.Lock()
+	parent.Children[name] = symlink
+	parent.mu.Unlock()
+
+	return symlink, nil
+}
+
 // Renaming
 func (k *KaitenFS) rename(oldParent *Directory, newParent *Directory, oldName string, newName string) error {
 	node, err := k.validateExistingChild(oldName, oldParent)

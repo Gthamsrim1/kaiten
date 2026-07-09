@@ -77,6 +77,12 @@ func (fs *KaitenFS) snapshotNode(n node.FSNode, parentID uint64, snap *persist.S
 		}
 
 		snap.Nodes = append(snap.Nodes, record)
+	
+	case *Symlink:
+		record.Type = persist.TypeSymlink
+		record.Target = v.Target
+
+		snap.Nodes = append(snap.Nodes, record)
 
 	default:
 		return fmt.Errorf("unknown node type %T", n)

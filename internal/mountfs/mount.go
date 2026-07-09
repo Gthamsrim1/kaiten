@@ -12,14 +12,7 @@ import (
 )
 
 func Mount(repo, mountPoint string, debug bool) (*kfs.KaitenFS, *fuse.Server, bool, error) {
-	createdMountPoint, err := ensureMountPoint(mountPoint)
-	if err != nil {
-		return nil, nil, false, err
-	}
-
-	var kaitenFS *kfs.KaitenFS
-
-	kaitenFS, err = kfs.Restore(repo)
+	kaitenFS, err := kfs.Restore(repo)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			kaitenFS = kfs.New()
@@ -33,9 +26,23 @@ func Mount(repo, mountPoint string, debug bool) (*kfs.KaitenFS, *fuse.Server, bo
 		}
 	}
 
+	server, createdMountPoint, err := MountFS(kaitenFS, mountPoint, debug)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	return kaitenFS, server, createdMountPoint, nil
+}
+
+func MountFS(fs *kfs.KaitenFS, mountPoint string, debug bool) (*fuse.Server, bool, error) {
+	createdMountPoint, err := ensureMountPoint(mountPoint)
+	if err != nil {
+		return nil, false, err
+	}
+
 	server, err := gofuse.Mount(
 		mountPoint,
-		kaitenFS.Root,
+		fs.Root,
 		&gofuse.Options{
 			MountOptions: fuse.MountOptions{
 				Debug:      debug,
@@ -45,12 +52,22 @@ func Mount(repo, mountPoint string, debug bool) (*kfs.KaitenFS, *fuse.Server, bo
 	)
 	if err != nil {
 		if createdMountPoint {
-			_ = os.Remove(mountPoint)
+			_ = os.RemoveAll(mountPoint)
 		}
-		return nil, nil, false, err
+		return nil, false, err
 	}
 
-	return kaitenFS, server, createdMountPoint, nil
+	if err := server.WaitMount(); err != nil {
+		server.Unmount()
+
+		if createdMountPoint {
+			_ = os.RemoveAll(mountPoint)
+		}
+
+		return nil, false, fmt.Errorf("mount failed: %w", err)
+	}
+
+	return server, createdMountPoint, nil
 }
 
 func ensureMountPoint(path string) (created bool, err error) {

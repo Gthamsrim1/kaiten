@@ -11,6 +11,7 @@ type NodeType uint8
 const (
 	TypeFile NodeType = iota
 	TypeDirectory
+	TypeSymlink
 )
 
 type Node struct {
@@ -31,6 +32,8 @@ type Node struct {
 	Atime time.Time
 	Mtime time.Time
 	Ctime time.Time
+
+	Target string `json:",omitempty"`
 }
 
 type Snapshot struct {

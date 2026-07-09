@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Gthamsrim1/kaiten/internal/persist"
+	"github.com/Gthamsrim1/kaiten/internal/runtime"
 )
 
 func main() {
@@ -71,6 +72,33 @@ func main() {
 
 	case "gc":
 		if err := persist.GC(*repo); err != nil {
+			log.Fatal(err)
+		}
+	
+	case "run":
+		if len(args) < 2 {
+			log.Fatal("usage: kaiten run <command> [args...]")
+		}
+
+		cfg := runtime.Config{
+			Repo:    *repo,
+			Command: args[1:],
+		}
+
+		if err := runtime.Run(cfg); err != nil {
+			log.Fatal(err)
+		}
+
+	case runtime.ChildCommand:
+		if err := runtime.Child(); err != nil {
+			log.Fatal(err)
+		}
+
+	case "import":
+		if len(args) != 2 {
+			log.Fatal("usage: kaiten import <repo>")
+		}
+		if err := runtime.Import(*repo, args[1]); err != nil {
 			log.Fatal(err)
 		}
 
